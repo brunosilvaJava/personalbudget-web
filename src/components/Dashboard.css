@@ -1,0 +1,137 @@
+.dashboard {
+  padding: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.dashboard h1 {
+  color: #333;
+  margin-bottom: 2rem;
+  font-size: 2rem;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+  margin-top: 2rem;
+}
+
+.stat-card {
+  background: white;
+  border-radius: 8px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s;
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.stat-card h3 {
+  margin: 0 0 1rem 0;
+  font-size: 1rem;
+  font-weight: 500;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.stat-value {
+  margin: 0;
+  font-size: 2rem;
+  font-weight: 700;
+  color: #333;
+}
+
+.stat-label {
+  display: block;
+  margin-top: 0.5rem;
+  font-size: 0.875rem;
+  color: #999;
+}
+
+/* Color themes for different card types */
+.stat-card.balance {
+  border-left: 4px solid #4caf50;
+}
+
+.stat-card.balance .stat-value {
+  color: #4caf50;
+}
+
+.stat-card.income,
+.stat-card.monthly-income {
+  border-left: 4px solid #2196f3;
+}
+
+.stat-card.income .stat-value,
+.stat-card.monthly-income .stat-value {
+  color: #2196f3;
+}
+
+.stat-card.expense,
+.stat-card.monthly-expense {
+  border-left: 4px solid #f44336;
+}
+
+.stat-card.expense .stat-value,
+.stat-card.monthly-expense .stat-value {
+  color: #f44336;
+}
+
+.stat-card.transactions {
+  border-left: 4px solid #ff9800;
+}
+
+.stat-card.transactions .stat-value {
+  color: #ff9800;
+}
+
+.loading,
+.error,
+.info {
+  padding: 2rem;
+  text-align: center;
+  border-radius: 8px;
+  margin-top: 2rem;
+}
+
+.loading {
+  background-color: #e3f2fd;
+  color: #1976d2;
+}
+
+.error {
+  background-color: #ffebee;
+  color: #c62828;
+}
+
+.info {
+  background-color: #fff3e0;
+  color: #e65100;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .dashboard {
+    padding: 1rem;
+  }
+
+  .dashboard h1 {
+    font-size: 1.5rem;
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .stat-value {
+    font-size: 1.5rem;
+  }
+}
