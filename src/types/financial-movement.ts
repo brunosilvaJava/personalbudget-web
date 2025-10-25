@@ -23,6 +23,7 @@ export interface FinancialMovementRequest {
   movementDate: string;
   dueDate: string;
   payDate?: string;
+  status: FinancialMovementStatus;
 }
 
 export interface FinancialMovementFilters {
@@ -31,4 +32,18 @@ export interface FinancialMovementFilters {
   statuses?: FinancialMovementStatus[];
   startDate: string;
   endDate: string;
+  page?: number;
+  size?: number;
+  sortBy?: string;
+  sortDirection?: 'ASC' | 'DESC';
+}
+
+export interface PagedFinancialMovementResponse {
+  content: FinancialMovement[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+  first: boolean;
+  last: boolean;
 }

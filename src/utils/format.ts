@@ -1,3 +1,6 @@
+import { format, parseISO } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+
 export const formatCurrency = (value: number): string => {
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
@@ -6,10 +9,46 @@ export const formatCurrency = (value: number): string => {
 };
 
 export const formatDate = (date: string | Date): string => {
-  const dateObj = typeof date === 'string' ? new Date(date) : date;
-  return new Intl.DateTimeFormat('pt-BR').format(dateObj);
+  try {
+    if (typeof date === 'string') {
+      // Tenta parseISO para strings ISO 8601
+      const parsedDate = parseISO(date);
+      return format(parsedDate, 'dd/MM/yyyy', { locale: ptBR });
+    }
+    return format(date, 'dd/MM/yyyy', { locale: ptBR });
+  } catch (error) {
+    console.error('Erro ao formatar data:', date, error);
+    return String(date);
+  }
+};
+
+export const formatDateTime = (date: string | Date): string => {
+  try {
+    if (typeof date === 'string') {
+      const parsedDate = parseISO(date);
+      return format(parsedDate, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
+    }
+    return format(date, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
+  } catch (error) {
+    console.error('Erro ao formatar data/hora:', date, error);
+    return String(date);
+  }
 };
 
 export const formatDateToISO = (date: Date): string => {
-  return date.toISOString().split('T')[0];
+  try {
+    return format(date, 'yyyy-MM-dd');
+  } catch (error) {
+    console.error('Erro ao formatar data para ISO:', date, error);
+    return '';
+  }
+};
+
+export const formatDateTimeToISO = (date: Date): string => {
+  try {
+    return date.toISOString();
+  } catch (error) {
+    console.error('Erro ao formatar data/hora para ISO:', date, error);
+    return '';
+  }
 };
