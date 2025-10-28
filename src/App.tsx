@@ -1,5 +1,52 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
 import { FinancialMovements } from '@/pages/FinancialMovements';
+import { FixedBills } from '@/pages/FixedBills';
+import { cn } from '@/lib/utils';
+
+function Navigation() {
+  const location = useLocation();
+
+  const isActive = (path: string) => location.pathname === path;
+
+  return (
+    <nav className="flex gap-4">
+      <Link 
+        to="/" 
+        className={cn(
+          "text-sm font-medium transition-colors",
+          isActive('/') 
+            ? "text-primary" 
+            : "text-muted-foreground hover:text-primary"
+        )}
+      >
+        Movimentações
+      </Link>
+      <Link 
+        to="/fixed-bills" 
+        className={cn(
+          "text-sm font-medium transition-colors",
+          isActive('/fixed-bills') 
+            ? "text-primary" 
+            : "text-muted-foreground hover:text-primary"
+        )}
+      >
+        Contas Fixas
+      </Link>
+      <a 
+        href="#" 
+        className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
+      >
+        Dashboard
+      </a>
+      <a 
+        href="#" 
+        className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
+      >
+        Parceladas
+      </a>
+    </nav>
+  );
+}
 
 function App() {
   return (
@@ -9,36 +56,11 @@ function App() {
         <header className="border-b sticky top-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
           <div className="container mx-auto px-4 py-4">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
+              <Link to="/" className="flex items-center gap-2">
                 <span className="text-2xl">💰</span>
                 <h1 className="text-xl font-bold">PersonalBudget</h1>
-              </div>
-              <nav className="flex gap-4">
-                <a 
-                  href="/" 
-                  className="text-sm font-medium hover:text-primary transition-colors"
-                >
-                  Movimentações
-                </a>
-                <a 
-                  href="#" 
-                  className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
-                >
-                  Dashboard
-                </a>
-                <a 
-                  href="#" 
-                  className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
-                >
-                  Contas Fixas
-                </a>
-                <a 
-                  href="#" 
-                  className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
-                >
-                  Parceladas
-                </a>
-              </nav>
+              </Link>
+              <Navigation />
             </div>
           </div>
         </header>
@@ -47,6 +69,7 @@ function App() {
         <main>
           <Routes>
             <Route path="/" element={<FinancialMovements />} />
+            <Route path="/fixed-bills" element={<FixedBills />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </main>
