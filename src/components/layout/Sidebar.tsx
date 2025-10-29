@@ -4,6 +4,7 @@ import {
   ArrowRightLeft, 
   Calendar, 
   CreditCard,
+  BookOpen,
   ChevronRight,
   Wallet
 } from 'lucide-react';
@@ -33,6 +34,12 @@ const menuItems = [
     href: '/installment-bills',
     icon: CreditCard,
     description: 'Compras parceladas',
+  },
+  {
+    title: 'Livro Caixa',
+    href: '/cash-book',
+    icon: BookOpen,
+    description: 'Fluxo de caixa diário',
   },
 ];
 

@@ -11,7 +11,6 @@ export const formatCurrency = (value: number): string => {
 export const formatDate = (date: string | Date): string => {
   try {
     if (typeof date === 'string') {
-      // Tenta parseISO para strings ISO 8601
       const parsedDate = parseISO(date);
       return format(parsedDate, 'dd/MM/yyyy', { locale: ptBR });
     }
