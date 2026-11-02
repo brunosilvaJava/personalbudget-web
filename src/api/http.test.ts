@@ -108,9 +108,7 @@ describe('request', () => {
   })
 
   it('should explain that the API is down when the proxy answers 5xx without JSON', async () => {
-    server.use(
-      http.get('/api/dashboard', () => HttpResponse.text('bad gateway', { status: 502 })),
-    )
+    server.use(http.get('/api/dashboard', () => HttpResponse.text('bad gateway', { status: 502 })))
 
     const error = (await catchError(request('/dashboard'))) as ApiError
 
