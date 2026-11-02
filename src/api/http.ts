@@ -16,8 +16,8 @@ export const API_UNAVAILABLE_MESSAGE = 'A API não respondeu. Confira se ela est
 type ErrorBody = ValidationErrorResponse | ErrorResponse
 
 /**
- * Thrown by `request` for any non-2xx answer, and with status 0 when there was no answer at
- * all (network down, PC off, timeout).
+ * Thrown by `request` for non-2xx answers, malformed JSON, and with status 0 when there was no
+ * answer at all (network down, PC off, timeout).
  */
 export class ApiError extends Error {
   readonly status: number
@@ -72,34 +72,34 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
   if (signal?.aborted) forwardAbort()
   else signal?.addEventListener('abort', forwardAbort, { once: true })
 
-  let response: Response
   try {
-    response = await fetch(`${API_BASE_URL}${path}`, {
+    const response = await fetch(`${API_BASE_URL}${path}`, {
       method,
       headers: buildHeaders(body !== undefined),
       body: body === undefined ? undefined : JSON.stringify(body),
       credentials: 'same-origin',
       signal: controller.signal,
     })
+
+    const payload = await readJson(response)
+
+    if (!response.ok) {
+      const errorBody = isErrorBody(payload) ? payload : undefined
+      // A 5xx without a JSON body comes from the proxy, not from Spring: the API is down.
+      const message = !errorBody && response.status >= 500 ? API_UNAVAILABLE_MESSAGE : undefined
+      throw new ApiError(response.status, errorBody, message)
+    }
+
+    return payload as T
   } catch (error) {
     // Cancelled by the caller: let it propagate as an AbortError, as TanStack Query expects.
     if (signal?.aborted) throw error
+    if (error instanceof ApiError) throw error
     throw new ApiError(0, undefined, timedOut ? TIMEOUT_ERROR_MESSAGE : NETWORK_ERROR_MESSAGE)
   } finally {
     clearTimeout(timer)
     signal?.removeEventListener('abort', forwardAbort)
   }
-
-  const payload = await readJson(response)
-
-  if (!response.ok) {
-    const errorBody = isErrorBody(payload) ? payload : undefined
-    // A 5xx without a JSON body comes from the proxy, not from Spring: the API is down.
-    const message = !errorBody && response.status >= 500 ? API_UNAVAILABLE_MESSAGE : undefined
-    throw new ApiError(response.status, errorBody, message)
-  }
-
-  return payload as T
 }
 
 /**
@@ -119,6 +119,9 @@ async function readJson(response: Response): Promise<unknown> {
   try {
     return JSON.parse(text) as unknown
   } catch {
+    if (response.ok) {
+      throw new ApiError(response.status, undefined, 'A API retornou uma resposta inválida.')
+    }
     return undefined
   }
 }
