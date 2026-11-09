@@ -46,6 +46,12 @@ async function deleteEnvelopes(request: APIRequestContext, cycle: PayCycle) {
   for (const envelope of envelopes) await request.delete(`/api/envelope/${envelope.code}`)
 }
 
+// Many steps against the real API (activating cycles, three writes, the forecast): more than the
+// default 30 s on a slow runner. A click that never finds its target fails after 10 s with its own
+// locator, instead of waiting for the end of the test and hiding which step it was.
+test.setTimeout(90_000)
+test.use({ actionTimeout: 10_000 })
+
 test('plans, changes and removes an envelope of a cycle, and the forecast reserves what is left', async ({
   page,
   request,
