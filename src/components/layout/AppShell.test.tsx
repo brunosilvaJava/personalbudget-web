@@ -13,7 +13,7 @@ function healthUp() {
 describe('AppShell', () => {
   it('should show the four sections and the Lançar button', async () => {
     healthUp()
-    renderApp('/')
+    renderApp('/mais')
 
     const [bottomNav] = screen.getAllByRole('navigation', {
       name: 'Navegação principal',
@@ -23,13 +23,16 @@ describe('AppShell', () => {
       .map((link) => link.textContent)
     expect(links).toEqual(['Início', 'Movimentações', 'Carteira', 'Mais'])
     // "Lançar" opens the quick entry over the current screen.
-    expect(screen.getAllByRole('link', { name: /Lançar/ })[0]).toHaveAttribute('href', '/?lancar=1')
+    expect(screen.getAllByRole('link', { name: /Lançar/ })[0]).toHaveAttribute(
+      'href',
+      '/mais?lancar=1',
+    )
     await screen.findByText('API conectada')
   })
 
   it('should tell when the API is not reachable', async () => {
     server.use(http.get('/api/actuator/health', () => new HttpResponse(null, { status: 502 })))
-    renderApp('/')
+    renderApp('/mais')
 
     expect(await screen.findByText('API fora do ar')).toBeInTheDocument()
     expect(screen.getByText(/Confira se ela está rodando no PC/)).toBeInTheDocument()
@@ -38,7 +41,7 @@ describe('AppShell', () => {
 
   it('should reach Recorrentes through Mais and keep the old /contas links working', async () => {
     healthUp()
-    const { router } = renderApp('/')
+    const { router } = renderApp('/movimentacoes/x')
 
     const [bottomNav] = screen.getAllByRole('navigation', {
       name: 'Navegação principal',
