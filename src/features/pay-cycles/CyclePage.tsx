@@ -1,4 +1,4 @@
-import { ArrowLeft, CalendarClock } from 'lucide-react'
+import { ArrowLeft, CalendarClock, PiggyBank } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useParams } from 'react-router'
 
@@ -74,6 +74,21 @@ function CycleView({ cycle }: { cycle: PayCycleResponse }) {
         ) : (
           <CycleSummaryView summary={summary.data} full />
         )}
+      </section>
+
+      <section aria-labelledby="envelopes-title" className="flex flex-col gap-2">
+        <h2 id="envelopes-title" className="font-medium">
+          Envelopes
+        </h2>
+        <p className="text-sm text-muted-foreground">
+          O quanto você planejou gastar por categoria neste ciclo e o que já foi usado.
+        </p>
+        <Button asChild variant="outline" className="h-11 self-start">
+          <Link to={`/ciclos/${cycle.code}/envelopes`}>
+            <PiggyBank aria-hidden />
+            Ver os envelopes
+          </Link>
+        </Button>
       </section>
 
       <BoundarySection cycle={cycle} />

@@ -1,6 +1,9 @@
 import type {
   AccountResponse,
   AccountTransferResponse,
+  BudgetEnvelopeResponse,
+  CashForecastResponse,
+  CycleEnvelopesResponse,
   CategoryGroupResponse,
   CategoryResponse,
   CreditCardResponse,
@@ -343,4 +346,72 @@ export function holidayYear(
   overrides: Partial<HolidayYearResponse> = {},
 ): HolidayYearResponse {
   return { year, reviewed: true, holidays: [], ...overrides }
+}
+
+/** An envelope with R$ 800 planned, R$ 300 paid and R$ 100 still to pay: R$ 400 free. */
+export function envelope(overrides: Partial<BudgetEnvelopeResponse> = {}): BudgetEnvelopeResponse {
+  return {
+    code: code('e0000001'),
+    cycle_code: 'p0000001-0000-4000-8000-000000000001',
+    category_code: categories.mercado.code,
+    category_name: 'Mercado',
+    planned_amount: 800,
+    recognized_amount: 300,
+    committed_amount: 100,
+    consumed_amount: 400,
+    remaining_amount: 400,
+    reserved_amount: 400,
+    overrun_amount: 0,
+    version: 1,
+    ...overrides,
+  }
+}
+
+/** The envelopes of a cycle; the totals are summed from the list unless overridden. */
+export function cycleEnvelopes(
+  list: BudgetEnvelopeResponse[],
+  overrides: Partial<CycleEnvelopesResponse> = {},
+): CycleEnvelopesResponse {
+  const sum = (pick: (item: BudgetEnvelopeResponse) => number) =>
+    list.reduce((total, item) => total + pick(item), 0)
+  return {
+    cycle_code: list[0]?.cycle_code ?? 'p0000001-0000-4000-8000-000000000001',
+    envelopes: list,
+    total_planned: sum((item) => item.planned_amount),
+    total_consumed: sum((item) => item.consumed_amount),
+    total_reserved: sum((item) => item.reserved_amount),
+    total_overrun: sum((item) => item.overrun_amount),
+    projection_incomplete: false,
+    ...overrides,
+  }
+}
+
+/**
+ * A comfortable forecast on 2026-11-10 up to the end of the cycle:
+ * 2.318,40 + 6.850 - 3.200 - 420 = 5.548,40 projected; minus 900 reserved and 300 of card after
+ * the horizon = 4.348,40 free.
+ */
+export function cashForecast(overrides: Partial<CashForecastResponse> = {}): CashForecastResponse {
+  return {
+    today: '2026-11-10',
+    until: '2026-12-03',
+    include_late_income: false,
+    cash_balance: 2318.4,
+    expected_income: 6850,
+    late_income: 0,
+    obligations: 3200,
+    card_invoices: 420,
+    projected_cash: 5548.4,
+    envelope_cycle_code: 'p0000001-0000-4000-8000-000000000001',
+    envelope_reserve: 900,
+    card_beyond_horizon: 300,
+    free_after_reserves: 4348.4,
+    lowest_projected_cash: 1200,
+    lowest_projected_cash_date: '2026-11-20',
+    first_negative_date: null,
+    negative_cash_alert: false,
+    insufficient_budget_alert: false,
+    projection_incomplete: false,
+    ...overrides,
+  }
 }

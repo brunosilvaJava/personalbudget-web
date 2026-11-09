@@ -21,6 +21,8 @@ interface CategorySelectProps {
   operationType: OperationType
   /** false when the category cannot be removed (PATCH only replaces it) */
   allowNone?: boolean
+  /** categories left out of the list (the ones that already have what is being created) */
+  excludeCodes?: ReadonlySet<UUID>
   disabled?: boolean
   'aria-invalid'?: boolean
   'aria-describedby'?: string
@@ -36,6 +38,7 @@ export function CategorySelect({
   onChange,
   operationType,
   allowNone = true,
+  excludeCodes,
   disabled,
   ...aria
 }: CategorySelectProps) {
@@ -64,16 +67,22 @@ export function CategorySelect({
           </>
         )}
         {currentIsHidden && <SelectItem value={current.code}>{current.name} (inativa)</SelectItem>}
-        {groups.data?.map((group) => (
-          <SelectGroup key={group.code}>
-            <SelectLabel>{group.name}</SelectLabel>
-            {group.categories.map((category) => (
-              <SelectItem key={category.code} value={category.code}>
-                {category.name}
-              </SelectItem>
-            ))}
-          </SelectGroup>
-        ))}
+        {groups.data?.map((group) => {
+          const categories = group.categories.filter(
+            (category) => !excludeCodes?.has(category.code),
+          )
+          if (categories.length === 0) return null
+          return (
+            <SelectGroup key={group.code}>
+              <SelectLabel>{group.name}</SelectLabel>
+              {categories.map((category) => (
+                <SelectItem key={category.code} value={category.code}>
+                  {category.name}
+                </SelectItem>
+              ))}
+            </SelectGroup>
+          )
+        })}
       </SelectContent>
     </Select>
   )

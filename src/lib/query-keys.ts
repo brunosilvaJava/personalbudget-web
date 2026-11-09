@@ -76,6 +76,11 @@ export const queryKeys = {
   payCycleConfig: ['pay-cycle-config'] as const,
   payCycleSummary: (code: UUID) => ['pay-cycle-summary', code] as const,
   payCycleAdjustments: (code: UUID) => ['pay-cycle-adjustments', code] as const,
+
+  envelopes: (cycleCode: UUID) => ['envelopes', cycleCode] as const,
+  /** `until` null is the back's own horizon (the end of the current cycle, or of the month) */
+  forecast: (until: ISODate | null, includeLateIncome: boolean) =>
+    ['forecast', until, includeLateIncome] as const,
 }
 
 /**
