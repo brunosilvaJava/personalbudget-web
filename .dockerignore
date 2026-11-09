@@ -1,0 +1,9 @@
+node_modules
+dist
+dev-dist
+.git
+.github
+playwright-report
+test-results
+*.local
+npm-debug.log*

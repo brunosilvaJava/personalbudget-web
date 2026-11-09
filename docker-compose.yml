@@ -1,0 +1,26 @@
+# The front-end next to the back-end: nginx on port 3000 serves the app and proxies /api to the API.
+#
+#   docker compose up -d --build
+#
+# The back runs from the compose of the personalbudget repo (profile "app"). This one joins its
+# network, so the API is reached by the service name, personal_budget. The real name of that network
+# carries the compose project prefix: check with `docker network ls` and, if it is not the default
+# below, set BACK_NETWORK in a .env file next to this one.
+services:
+  web:
+    container_name: personal_budget_web
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    restart: always
+    environment:
+      API_UPSTREAM: ${API_UPSTREAM:-http://personal_budget:8080}
+    ports:
+      - '${WEB_PORT:-3000}:80'
+    networks:
+      - personalbudget-network
+
+networks:
+  personalbudget-network:
+    external: true
+    name: ${BACK_NETWORK:-personalbudget_personalbudget-network}

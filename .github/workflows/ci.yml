@@ -23,3 +23,115 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
+
+  e2e:
+    name: e2e (Playwright, real back-end in Docker)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      # The back's compose is started as project "personalbudget", so its network is the one the
+      # front's docker-compose.yml joins by default.
+      BACK_PROJECT: personalbudget
+    steps:
+      - uses: actions/checkout@v5
+
+      # The back-end is public: no token needed. `master` is what runs at home.
+      - uses: actions/checkout@v5
+        with:
+          repository: brunosilvaJava/personalbudget
+          ref: master
+          path: back
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      - name: Pin the images of the back (Gradle and MySQL)
+        working-directory: back
+        run: |
+          # The back's files say `gradle:jdk21` and `mysql:latest`, which now mean Gradle 9 and
+          # MySQL 26. The back (wrapper 8.6, Spring Dependency Management 1.1.4, MySQL 8.0 in
+          # the stack) does not build on the first. Drop each pin when the back pins it itself.
+          if grep -q '^FROM gradle:jdk21' Dockerfile; then
+            sed -i 's|^FROM gradle:jdk21 as gradle|FROM gradle:8.6-jdk21 AS gradle|' Dockerfile
+          fi
+          sed -i 's|image: mysql:latest|image: mysql:8.0|' docker-compose.yml
+          head -2 Dockerfile
+          grep -n "image: mysql" docker-compose.yml
+
+      - name: Start the back-end (MySQL + API, empty database)
+        working-directory: back
+        run: docker compose -p "$BACK_PROJECT" --profile app up -d --build
+
+      - name: Wait for the API
+        id: api
+        continue-on-error: true
+        run: |
+          for i in $(seq 1 40); do
+            if curl -fsS http://localhost:8080/actuator/health > /dev/null; then exit 0; fi
+            sleep 3
+          done
+          exit 1
+
+      - name: Restart the API without schema validation (workaround)
+        if: steps.api.outcome == 'failure'
+        working-directory: back
+        run: |
+          echo "::warning title=back-end::The API did not start with ddl-auto=validate (application-local.yml). Running the e2e with ddl-auto=none. First schema error:"
+          docker compose -p "$BACK_PROJECT" --profile app logs personal_budget 2>&1 | grep -m1 "Schema-validation" | cut -c1-400 || true
+          cat > /tmp/no-validate.yml <<'YAML'
+          services:
+            personal_budget:
+              environment:
+                SPRING_JPA_HIBERNATE_DDL_AUTO: none
+          YAML
+          docker compose -p "$BACK_PROJECT" -f docker-compose.yml -f /tmp/no-validate.yml --profile app up -d personal_budget
+          for i in $(seq 1 100); do
+            if curl -fsS http://localhost:8080/actuator/health > /dev/null; then exit 0; fi
+            sleep 3
+          done
+          echo "The API did not come up even without schema validation"
+          exit 1
+
+      - name: Start the front-end (nginx on port 3000)
+        run: docker compose up -d --build
+
+      - name: Wait for the front-end and its /api proxy
+        run: |
+          for i in $(seq 1 30); do
+            if curl -fsS http://localhost:3000/api/actuator/health > /dev/null; then exit 0; fi
+            sleep 2
+          done
+          echo "http://localhost:3000/api did not answer"
+          exit 1
+
+      - name: Contract (contracts.ts x the back's OpenAPI)
+        run: npm run check:contract -- http://localhost:3000/api/v3/api-docs
+
+      - run: npx playwright install --with-deps chromium
+
+      - name: Playwright
+        run: npm run e2e
+
+      - name: Logs
+        if: failure()
+        run: |
+          docker ps -a || true
+          echo "::group::front"
+          docker compose logs --no-color --tail 200 || true
+          echo "::endgroup::"
+          echo "::group::back"
+          docker compose -p "$BACK_PROJECT" -f back/docker-compose.yml --profile app logs --no-color --tail 400 || true
+          echo "::endgroup::"
+
+      - name: Upload the Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            playwright-report
+            test-results
