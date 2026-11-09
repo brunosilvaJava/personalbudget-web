@@ -1,11 +1,10 @@
-import { ArrowLeftRight, LoaderCircle, Plus } from 'lucide-react'
+import { ArrowLeftRight, LoaderCircle } from 'lucide-react'
 import { useEffect, useEffectEvent, useRef } from 'react'
-import { Link } from 'react-router'
 
 import type { FinancialMovementResponse } from '@/api/contracts'
 import { EmptyState } from '@/components/domain/EmptyState'
 import { ErrorState } from '@/components/domain/ErrorState'
-import { LAUNCH_PATH } from '@/components/layout/nav-items'
+import { LaunchButton } from '@/components/layout/LaunchButton'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useCategoryLookup } from '@/features/categories/queries'
@@ -65,14 +64,7 @@ export function MovementList({ filters, filtered, onClearFilters, onSelect }: Mo
         icon={ArrowLeftRight}
         title="Nenhuma movimentação no período"
         description="Lance uma despesa ou receita para ela aparecer aqui."
-        action={
-          <Button asChild className="h-11">
-            <Link to={LAUNCH_PATH}>
-              <Plus aria-hidden />
-              Lançar
-            </Link>
-          </Button>
-        }
+        action={<LaunchButton variant="wide" className="w-auto px-6" />}
       />
     )
   }

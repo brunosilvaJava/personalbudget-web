@@ -22,10 +22,8 @@ describe('AppShell', () => {
       .getAllByRole('link')
       .map((link) => link.textContent)
     expect(links).toEqual(['Início', 'Caixa', 'Movimentações', 'Contas'])
-    expect(screen.getAllByRole('link', { name: /Lançar/ })[0]).toHaveAttribute(
-      'href',
-      '/movimentacoes?lancar=1',
-    )
+    // "Lançar" opens the quick entry over the current screen.
+    expect(screen.getAllByRole('link', { name: /Lançar/ })[0]).toHaveAttribute('href', '/?lancar=1')
     await screen.findByText('API conectada')
   })
 

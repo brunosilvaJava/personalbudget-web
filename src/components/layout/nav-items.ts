@@ -14,6 +14,3 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { to: '/movimentacoes', label: 'Movimentações', icon: ArrowLeftRight },
   { to: '/contas', label: 'Contas', icon: CalendarClock },
 ]
-
-/** Where "Lançar" goes. Phase 1 opens the quick entry sheet there. */
-export const LAUNCH_PATH = '/movimentacoes?lancar=1'
