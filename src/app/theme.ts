@@ -1,17 +1,14 @@
 import { useEffect } from 'react'
 
-const DARK_QUERY = '(prefers-color-scheme: dark)'
+import { applyTheme, watchSystemTheme } from '@/lib/theme'
 
 /**
- * Keeps the `dark` class on <html> in sync with the system theme. index.html sets it once
- * before the first paint; this follows later changes (e.g. the phone switching at night).
+ * Keeps the `dark` class on <html> in sync with the chosen theme (system, light or dark).
+ * index.html sets it once before the first paint; this follows later changes.
  */
-export function useSystemTheme() {
+export function useAppTheme() {
   useEffect(() => {
-    const media = window.matchMedia(DARK_QUERY)
-    const apply = () => document.documentElement.classList.toggle('dark', media.matches)
-    apply()
-    media.addEventListener('change', apply)
-    return () => media.removeEventListener('change', apply)
+    applyTheme()
+    return watchSystemTheme()
   }, [])
 }

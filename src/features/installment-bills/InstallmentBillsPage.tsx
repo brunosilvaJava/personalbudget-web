@@ -7,7 +7,7 @@ export function InstallmentBillsPage() {
     <EmptyState
       icon={ReceiptText}
       title="Parceladas em construção"
-      description="Cadastro com valor por parcela e total da compra chega na Fase 3."
+      description="Cadastro com valor por parcela e total da compra chega na Fase 4."
     />
   )
 }

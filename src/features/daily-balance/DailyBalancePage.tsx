@@ -10,7 +10,7 @@ export function DailyBalancePage() {
       <EmptyState
         icon={ChartLine}
         title="Caixa diário em construção"
-        description="O gráfico real x projetado e a lista por dia chegam na Fase 2."
+        description="O gráfico real x projetado e a lista por dia chegam na Fase 3."
       />
     </>
   )

@@ -5,11 +5,11 @@ import { RouterProvider } from 'react-router'
 import { Toaster } from '@/components/ui/sonner'
 import { createQueryClient } from './query-client'
 import { router } from './router'
-import { useSystemTheme } from './theme'
+import { useAppTheme } from './theme'
 
 export function App() {
   const [queryClient] = useState(createQueryClient)
-  useSystemTheme()
+  useAppTheme()
 
   return (
     <QueryClientProvider client={queryClient}>
