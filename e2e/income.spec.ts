@@ -62,15 +62,15 @@ test('creates an income schedule, sees each month with its date, posts next mont
     await expect(page.getByText('Dia 28 de cada mês, mesmo em dia não útil')).toBeVisible()
 
     // Twelve months, from this one, each on its day 28.
-    const rows = page.getByRole('listitem').filter({ hasText: /de 20\d\d/ })
+    // Scoped to the "Mês a mês" section: the success toast is a list item too and names the month.
+    const months = page.getByRole('region', { name: 'Mês a mês' })
+    const rows = months.getByRole('listitem')
     await expect(rows).toHaveCount(12)
-    const next = page.getByRole('listitem').filter({ hasText: monthLabel(nextMonth) })
+    const next = rows.filter({ hasText: monthLabel(nextMonth) })
     await expect(next).toContainText('Prevista')
     await expect(next).toContainText(brDate(`${nextMonth}-28`))
     await expect(next).toContainText(moneyPattern(1000))
-    const beyond = page
-      .getByRole('listitem')
-      .filter({ hasText: monthLabel(shiftMonth(thisMonth, 3)) })
+    const beyond = rows.filter({ hasText: monthLabel(shiftMonth(thisMonth, 3)) })
     await expect(beyond).toContainText('Prevista')
     // Only this month and the next one can be posted ahead of the job.
     await expect(beyond.getByRole('button', { name: 'Lançar agora' })).toHaveCount(0)
