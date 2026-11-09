@@ -85,12 +85,11 @@ export function FixedBillForm({
   const onSubmit = handleSubmit((values) => {
     setFormError(null)
     if (bill) {
-      update.mutate(
-        { code: bill.code, body: toFixedBillUpdate(bill, values) },
-        { onSuccess, onError },
-      )
+      update
+        .mutateAsync({ code: bill.code, body: toFixedBillUpdate(bill, values) })
+        .then(onSuccess, onError)
     } else {
-      create.mutate(toFixedBillRequest(values), { onSuccess, onError })
+      create.mutateAsync(toFixedBillRequest(values)).then(onSuccess, onError)
     }
   })
 

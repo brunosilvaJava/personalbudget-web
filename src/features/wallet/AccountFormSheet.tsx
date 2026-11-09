@@ -82,27 +82,18 @@ function AccountForm({ account, onDone }: { account?: AccountResponse; onDone: (
   const onSubmit = handleSubmit((values) => {
     setFormError(null)
     if (!account) {
-      create.mutate(toAccountRequest(values), {
-        onSuccess: (created) => {
-          toast.success(`Conta “${created.name}” criada.`)
-          onDone()
-        },
-        onError,
-      })
+      create.mutateAsync(toAccountRequest(values)).then((created) => {
+        toast.success(`Conta “${created.name}” criada.`)
+        onDone()
+      }, onError)
       return
     }
     const body = toAccountUpdate(account, values)
     if (Object.keys(body).length === 0) return onDone()
-    update.mutate(
-      { code: account.code, body },
-      {
-        onSuccess: () => {
-          toast.success('Conta atualizada.')
-          onDone()
-        },
-        onError,
-      },
-    )
+    update.mutateAsync({ code: account.code, body }).then(() => {
+      toast.success('Conta atualizada.')
+      onDone()
+    }, onError)
   })
 
   return (

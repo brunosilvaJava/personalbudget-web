@@ -235,17 +235,17 @@ function InstallmentBillSheet({
               destructive
               pending={remove.isPending}
               onConfirm={() =>
-                remove.mutate(bill.code, {
-                  onSuccess: () => {
+                remove.mutateAsync(bill.code).then(
+                  () => {
                     setConfirmDelete(false)
                     toast.success('Parcelada excluída.')
                     onClose()
                   },
-                  onError: (deleteError) => {
+                  (deleteError) => {
                     setConfirmDelete(false)
                     setError(errorMessage(deleteError))
                   },
-                })
+                )
               }
             />
           </>
@@ -299,12 +299,11 @@ function InstallmentBillForm({
   const onSubmit = handleSubmit((values) => {
     setFormError(null)
     if (bill) {
-      update.mutate(
-        { code: bill.code, body: toInstallmentBillUpdate(bill, values) },
-        { onSuccess, onError },
-      )
+      update
+        .mutateAsync({ code: bill.code, body: toInstallmentBillUpdate(bill, values) })
+        .then(onSuccess, onError)
     } else {
-      create.mutate(toInstallmentBillRequest(values), { onSuccess, onError })
+      create.mutateAsync(toInstallmentBillRequest(values)).then(onSuccess, onError)
     }
   })
 

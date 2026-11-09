@@ -62,15 +62,12 @@ export function MovementEditForm({ movement, onCancel, onSaved }: MovementEditFo
       onCancel()
       return
     }
-    update.mutate(
-      { code: movement.code, body },
-      {
-        onSuccess: () => {
-          toast.success('Movimentação atualizada.')
-          onSaved()
-        },
-        onError: (error) => setFormError(applyApiErrors(error, setError, MOVEMENT_EDIT_FIELDS)),
+    update.mutateAsync({ code: movement.code, body }).then(
+      () => {
+        toast.success('Movimentação atualizada.')
+        onSaved()
       },
+      (error) => setFormError(applyApiErrors(error, setError, MOVEMENT_EDIT_FIELDS)),
     )
   })
 

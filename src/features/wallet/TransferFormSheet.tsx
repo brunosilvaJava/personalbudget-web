@@ -81,13 +81,13 @@ function TransferForm({ fromAccountCode, onDone }: { fromAccountCode?: UUID; onD
 
   const onSubmit = handleSubmit((values) => {
     setFormError(null)
-    create.mutate(toTransferRequest(values), {
-      onSuccess: (transfer) => {
+    create.mutateAsync(toTransferRequest(values)).then(
+      (transfer) => {
         toast.success(`Transferência de ${formatMoney(transfer.amount)} registrada.`)
         onDone()
       },
-      onError: (error) => setFormError(applyApiErrors(error, setError, TRANSFER_FIELDS)),
-    })
+      (error) => setFormError(applyApiErrors(error, setError, TRANSFER_FIELDS)),
+    )
   })
 
   return (

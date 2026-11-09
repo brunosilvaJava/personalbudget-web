@@ -72,12 +72,9 @@ function ScheduleView({ schedule }: { schedule: IncomeScheduleResponse }) {
   const category = schedule.category_code ? categories.get(schedule.category_code) : undefined
 
   const activate = () =>
-    setActive.mutate(
-      { code: schedule.code, active: true },
-      {
-        onSuccess: () => toast.success('Receita ativada.'),
-        onError: (error) => setActionError(errorMessage(error)),
-      },
+    setActive.mutateAsync({ code: schedule.code, active: true }).then(
+      () => toast.success('Receita ativada.'),
+      (error) => setActionError(errorMessage(error)),
     )
 
   return (
@@ -136,17 +133,14 @@ function ScheduleView({ schedule }: { schedule: IncomeScheduleResponse }) {
         confirmLabel="Inativar"
         pending={setActive.isPending}
         onConfirm={() =>
-          setActive.mutate(
-            { code: schedule.code, active: false },
-            {
-              onSuccess: () => {
-                setConfirmInactivate(false)
-                toast.success('Receita inativada.')
-              },
-              onError: (error) => {
-                setConfirmInactivate(false)
-                setActionError(errorMessage(error))
-              },
+          setActive.mutateAsync({ code: schedule.code, active: false }).then(
+            () => {
+              setConfirmInactivate(false)
+              toast.success('Receita inativada.')
+            },
+            (error) => {
+              setConfirmInactivate(false)
+              setActionError(errorMessage(error))
             },
           )
         }
@@ -230,17 +224,14 @@ function Occurrences({ schedule }: { schedule: IncomeScheduleResponse }) {
         onConfirm={() => {
           if (!pending) return
           setError(null)
-          materialize.mutate(
-            { code: schedule.code, month: pending.nominal_month },
-            {
-              onSuccess: () => {
-                toast.success(`Receita de ${formatMonth(pending.nominal_month)} lançada.`)
-                setPending(null)
-              },
-              onError: (mutationError) => {
-                setPending(null)
-                setError(errorMessage(mutationError))
-              },
+          materialize.mutateAsync({ code: schedule.code, month: pending.nominal_month }).then(
+            () => {
+              toast.success(`Receita de ${formatMonth(pending.nominal_month)} lançada.`)
+              setPending(null)
+            },
+            (mutationError) => {
+              setPending(null)
+              setError(errorMessage(mutationError))
             },
           )
         }}
