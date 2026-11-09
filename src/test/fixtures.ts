@@ -6,6 +6,9 @@ import type {
   CreditCardResponse,
   FinancialMovementResponse,
   FixedBillResponse,
+  HolidayYearResponse,
+  IncomeOccurrenceResponse,
+  IncomeScheduleResponse,
   InstallmentBillResponse,
   Page,
   PayCycleResponse,
@@ -216,4 +219,46 @@ export function installmentBill(
     category_code: null,
     ...overrides,
   }
+}
+
+export function incomeSchedule(
+  overrides: Partial<IncomeScheduleResponse> = {},
+): IncomeScheduleResponse {
+  return {
+    code: code('is'),
+    description: 'Salário',
+    amount: 6850,
+    category_code: null,
+    rule_type: 'FIXED_DAY',
+    rule_value: 5,
+    business_week: 'MONDAY_TO_FRIDAY',
+    non_business_day_policy: 'ANTICIPATE',
+    start_month: '2026-01',
+    end_month: null,
+    anchor: false,
+    status: 'ACTIVE',
+    replaces_fixed_bill_code: null,
+    ...overrides,
+  }
+}
+
+export function occurrence(
+  overrides: Partial<IncomeOccurrenceResponse> = {},
+): IncomeOccurrenceResponse {
+  return {
+    nominal_month: '2026-11',
+    state: 'PROJECTED',
+    planned_date: '2026-11-05',
+    amount: 6850,
+    movement_code: null,
+    pending_year: null,
+    ...overrides,
+  }
+}
+
+export function holidayYear(
+  year: number,
+  overrides: Partial<HolidayYearResponse> = {},
+): HolidayYearResponse {
+  return { year, reviewed: true, holidays: [], ...overrides }
 }

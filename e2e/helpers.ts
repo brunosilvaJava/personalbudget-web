@@ -62,3 +62,37 @@ export async function accountCodeByName(request: APIRequestContext, name: string
   expect(found, `account "${name}" in GET /account`).toBeDefined()
   return found!.code
 }
+
+const MONTH_NAMES = [
+  'janeiro',
+  'fevereiro',
+  'março',
+  'abril',
+  'maio',
+  'junho',
+  'julho',
+  'agosto',
+  'setembro',
+  'outubro',
+  'novembro',
+  'dezembro',
+]
+
+/** The month `offset` months from `month` ("2026-11" + 2 → "2027-01"). */
+export function shiftMonth(month: string, offset: number): string {
+  const [year, number] = month.split('-').map(Number) as [number, number]
+  const index = year * 12 + (number - 1) + offset
+  return `${Math.floor(index / 12)}-${String((index % 12) + 1).padStart(2, '0')}`
+}
+
+/** "2026-12" → "dezembro de 2026", the way the app writes a month. */
+export function monthLabel(month: string): string {
+  const [year, number] = month.split('-').map(Number) as [number, number]
+  return `${MONTH_NAMES[number - 1]} de ${year}`
+}
+
+/** "2026-12-28" → "28/12/2026". */
+export function brDate(date: string): string {
+  const [year, month, day] = date.split('-')
+  return `${day}/${month}/${year}`
+}
