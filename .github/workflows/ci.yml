@@ -96,8 +96,13 @@ jobs:
       - name: Logs
         if: failure()
         run: |
+          docker ps -a || true
+          echo "::group::front"
           docker compose logs --no-color --tail 200 || true
-          docker compose -p "$BACK_PROJECT" -f back/docker-compose.yml logs --no-color --tail 300 || true
+          echo "::endgroup::"
+          echo "::group::back"
+          docker compose -p "$BACK_PROJECT" -f back/docker-compose.yml --profile app logs --no-color --tail 400 || true
+          echo "::endgroup::"
 
       - name: Upload the Playwright report
         if: failure()
