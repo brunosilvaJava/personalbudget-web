@@ -22,6 +22,15 @@ import { fileURLToPath } from 'node:url'
 const OPENAPI_TYPESCRIPT = 'openapi-typescript@7.13.0'
 const TYPESCRIPT_5 = 'typescript@5.9.3'
 
+// The front names that differ from the schema's, and the fields of a schema the front leaves out on
+// purpose. Every entry is a decision, with its reason.
+const ALIASES = { DailyBalance: 'DailyBalanceResponse' }
+const IGNORED_BACK_FIELDS = {
+  // The PATCH bodies also declare `code`, which the server fills from the path: never sent.
+  FixedBillUpdateRequest: ['code'],
+  InstallmentBillUpdateRequest: ['code'],
+}
+
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const contractsPath = join(root, 'src/api/contracts.ts')
 const url = process.argv[2] ?? 'http://localhost:3000/api/v3/api-docs'
@@ -65,7 +74,16 @@ const contracts = readFileSync(contractsPath, 'utf8')
 const mine = [...contracts.matchAll(/^export interface (\w+)(<[^{]*)? (?:extends [^{]+)?\{/gm)]
   .filter((match) => !match[2])
   .map((match) => match[1])
-const shared = mine.filter((name) => schemas.includes(name))
+const pairs = mine
+  .map((name) => ({ name, schema: ALIASES[name] ?? name }))
+  .filter(({ schema }) => schemas.includes(schema))
+const matched = new Set(pairs.map(({ schema }) => schema))
+const front = (name) => `Front.${name}`
+const back = ({ name, schema }) => {
+  const ignored = IGNORED_BACK_FIELDS[name]
+  const base = `Back<'${schema}'>`
+  return ignored ? `Omit<${base}, ${ignored.map((f) => `'${f}'`).join(' | ')}>` : base
+}
 
 const header = `import type { components } from './schema'
 import type * as Front from ${JSON.stringify(contractsPath.replace(/\.ts$/, ''))}
@@ -75,12 +93,18 @@ const keysCheck = `${header}
 type SameFields<A, B> = [Exclude<keyof A, keyof B>, Exclude<keyof B, keyof A>] extends [never, never]
   ? true
   : { front_only: Exclude<keyof A, keyof B>; back_only: Exclude<keyof B, keyof A> }
-${shared.map((name, i) => `export const keys${i}: SameFields<Front.${name}, Back<'${name}'>> = true // ${name}`).join('\n')}
+${pairs.map((pair, i) => `export const keys${i}: SameFields<${front(pair.name)}, ${back(pair)}> = true // ${pair.name}`).join('\n')}
 `
+// Nullability is ignored all the way down: the document does not say which fields may be null.
 const typesCheck = `${header}
-type Plain<T> = { [K in keyof T]-?: NonNullable<T[K]> }
-type Assignable<A, B> = [Plain<A>] extends [Plain<B>] ? true : false
-${shared.map((name, i) => `export const types${i}: Assignable<Front.${name}, Back<'${name}'>> = true // ${name}`).join('\n')}
+type Plain<T> = T extends readonly (infer U)[]
+  ? Plain<NonNullable<U>>[]
+  : T extends object
+    ? { [K in keyof T]-?: Plain<NonNullable<T[K]>> }
+    : T
+type Bad<A, B> = { [K in keyof A & keyof B]: [Plain<A[K]>] extends [Plain<B[K]>] ? never : K }[keyof A & keyof B]
+type Assignable<A, B> = [Bad<A, B>] extends [never] ? true : { fields: Bad<A, B> }
+${pairs.map((pair, i) => `export const types${i}: Assignable<${front(pair.name)}, ${back(pair)}> = true // ${pair.name}`).join('\n')}
 `
 writeFileSync(join(work, 'keys.check.ts'), keysCheck)
 writeFileSync(join(work, 'types.check.ts'), typesCheck)
@@ -101,16 +125,13 @@ const tsc = join(root, 'node_modules/.bin/tsc')
 const run = (file) =>
   spawnSync(tsc, [...tscArgs, join(work, file)], { encoding: 'utf8', cwd: work })
 
-const only = (list, other) => list.filter((name) => !other.includes(name))
+const frontOnly = mine.filter((name) => !pairs.some((pair) => pair.name === name))
+const backOnly = schemas.filter((name) => !matched.has(name))
 console.log(
-  `\nContract: ${mine.length} interfaces; back: ${schemas.length} schemas; compared: ${shared.length}`,
+  `\nContract: ${mine.length} interfaces; back: ${schemas.length} schemas; compared: ${pairs.length}`,
 )
-console.log(
-  `Only in the front (${only(mine, schemas).length}): ${only(mine, schemas).join(', ') || '-'}`,
-)
-console.log(
-  `Only in the back  (${only(schemas, mine).length}): ${only(schemas, mine).join(', ') || '-'}`,
-)
+console.log(`Only in the front (${frontOnly.length}): ${frontOnly.join(', ') || '-'}`)
+console.log(`Only in the back  (${backOnly.length}): ${backOnly.join(', ') || '-'}`)
 
 let failed = false
 
@@ -133,9 +154,9 @@ if (types.status !== 0) {
   for (const line of types.stdout.split('\n').filter((l) => /error TS/.test(l))) {
     const at = /\((\d+),\d+\)/.exec(line)
     const name = at ? typesCheck.split('\n')[Number(at[1]) - 1]?.split('// ')[1] : undefined
-    console.warn(`  ${name ?? line}`)
+    const diff = /not assignable to type '(.*)'\.\s*$/.exec(line)?.[1]
+    console.warn(`  ${name ?? line}: ${diff ?? ''}`)
   }
-  console.warn(`  (details: ${join(work, 'types.check.ts')})`)
 }
 
 if (failed) process.exit(1)
