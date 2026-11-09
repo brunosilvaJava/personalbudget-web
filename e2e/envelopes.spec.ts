@@ -82,7 +82,11 @@ test('plans, changes and removes an envelope of a cycle, and the forecast reserv
     await sheet.getByRole('button', { name: 'Criar envelope' }).click()
 
     await expect(page.getByText(`Envelope de ${category!.name} criado.`).first()).toBeVisible()
-    const card = page.getByRole('listitem').filter({ hasText: category!.name })
+    // inside the list: the toast is a list item too, and it names the category as well
+    const card = page
+      .getByRole('list', { name: 'Envelopes do ciclo' })
+      .getByRole('listitem')
+      .filter({ hasText: category!.name })
     await expect(card).toContainText(moneyPattern(800))
     await expect(card.getByRole('progressbar')).toBeVisible()
     const created = await envelopesOf(request, target)
