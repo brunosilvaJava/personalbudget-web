@@ -107,7 +107,11 @@ test('plans, changes and removes an envelope of a cycle, and the forecast reserv
     const second = page.getByRole('dialog', { name: 'Novo envelope' })
     await second.getByRole('combobox', { name: 'Categoria' }).click()
     await expect(page.getByRole('option', { name: category!.name, exact: true })).toHaveCount(0)
+    // One Escape closes the list; the sheet is out of the accessibility tree while it is open, and
+    // back in it when it closes. Wait for that before the second Escape, which closes the sheet:
+    // pressed at once, it lands while the list is still closing and leaves the page locked.
     await page.keyboard.press('Escape')
+    await expect(page.getByRole('dialog', { name: 'Novo envelope' })).toHaveCount(1)
     await page.keyboard.press('Escape')
     await expect(page.getByRole('dialog')).toHaveCount(0)
 
