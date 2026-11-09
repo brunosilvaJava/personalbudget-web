@@ -140,8 +140,13 @@ test('activates the cycles on an anchor schedule, adjusts a boundary and turns t
     await adjustment.getByLabel('Motivo').fill('Ajuste do teste E2E')
     await adjustment.getByRole('button', { name: 'Ajustar a virada' }).click()
 
-    // The boundary moved, was marked as set by hand and went to the history.
-    await expect(page.getByText('Virada ajustada.')).toBeVisible()
+    // The boundary moved, was marked as set by hand and went to the history. When the back refuses,
+    // its message is in the sheet: show it instead of a bare "not found".
+    const done = page.getByText('Virada ajustada.')
+    const refused = adjustment.getByRole('alert')
+    await expect(done.or(refused).first()).toBeVisible()
+    expect(await refused.allInnerTexts(), 'the back refused the adjustment').toEqual([])
+    await expect(done).toBeVisible()
     const moved = await apiGet<Cycle>(request, `/pay_cycle/${cycle.code}`)
     expect(moved).toMatchObject({ end_date_exclusive: newEnd, end_adjusted: true })
     const adjustments = page.getByRole('region', { name: 'Histórico de ajustes' })
