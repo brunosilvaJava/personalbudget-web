@@ -36,9 +36,10 @@ export const queryKeys = {
   categories: (statuses: readonly CategoryStatus[]) => ['categories', statuses] as const,
   categoryGroups: ['category-groups'] as const,
 
-  fixedBills: (filters: FixedBillQuery) => ['fixed-bills', CURRENT_SCOPE, filters] as const,
+  fixedBills: (filters: Omit<FixedBillQuery, 'page' | 'size'>) =>
+    ['fixed-bills', CURRENT_SCOPE, filters] as const,
   fixedBill: (code: UUID) => ['fixed-bill', CURRENT_SCOPE, code] as const,
-  installmentBills: (filters: InstallmentBillQuery) =>
+  installmentBills: (filters: Omit<InstallmentBillQuery, 'page' | 'size'>) =>
     ['installment-bills', CURRENT_SCOPE, filters] as const,
   installmentBill: (code: UUID) => ['installment-bill', CURRENT_SCOPE, code] as const,
 

@@ -3,6 +3,8 @@ import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { describe, expect, it } from 'vitest'
 
+import { mockCommonApi } from '@/test/api'
+import { page } from '@/test/fixtures'
 import { renderApp } from '@/test/render'
 import { server } from '@/test/server'
 
@@ -40,7 +42,11 @@ describe('AppShell', () => {
   })
 
   it('should reach Recorrentes through Mais and keep the old /contas links working', async () => {
-    healthUp()
+    mockCommonApi()
+    server.use(
+      http.get('/api/fixed_bill', () => HttpResponse.json(page([]))),
+      http.get('/api/installment_bill', () => HttpResponse.json(page([]))),
+    )
     const { router } = renderApp('/movimentacoes/x')
 
     const [bottomNav] = screen.getAllByRole('navigation', {
@@ -51,7 +57,7 @@ describe('AppShell', () => {
     await userEvent.click(within(more).getByRole('link', { name: 'Recorrentes' }))
 
     expect(router.state.location.pathname).toBe('/recorrentes/fixas')
-    expect(await screen.findByText('Contas fixas em construção')).toBeInTheDocument()
+    expect(await screen.findByText('Nenhuma conta fixa ativa')).toBeInTheDocument()
 
     await router.navigate('/contas/parceladas')
     await waitFor(() => expect(router.state.location.pathname).toBe('/recorrentes/parceladas'))
