@@ -107,6 +107,7 @@ O Playwright roda os cenários contra o app servido como no dia a dia (nginx na 
 - criar uma conta fixa com vencimento hoje e ver o lançamento gerado na hora, uma vez só;
 - comprar no cartão, pagar a fatura e ver o saldo da conta baixar (e voltar ao estornar);
 - os números do Início contra `GET /dashboard` e `GET /account/balance`;
+- fechar um ciclo que já terminou pela tela (revisão com os números do back, snapshot), ver a movimentação do ciclo fechado travada e reabrir (só no celular: o ciclo passado só dá para criar uma vez por banco);
 - manifest instalável, abrir sem conexão com o service worker e nenhum `/api` no cache.
 
 No CI, o job `e2e` baixa o back (`master`), sobe MySQL e API com `docker compose --profile app` (banco vazio), sobe o front e roda tudo. Para rodar em casa:

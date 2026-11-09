@@ -163,7 +163,6 @@ export async function createAnchor(
   request: APIRequestContext,
   description: string,
   daysAhead = 10,
-  startMonth = todayIso().slice(0, 7),
 ): Promise<IncomeSchedule> {
   const today = todayIso()
   const created = await request.post('/api/income_schedule', {
@@ -174,11 +173,14 @@ export async function createAnchor(
       rule_value: Number(shiftDate(today, daysAhead).slice(8)),
       business_week: 'MONDAY_TO_FRIDAY',
       non_business_day_policy: 'KEEP',
-      start_month: startMonth,
+      start_month: today.slice(0, 7),
       anchor: true,
     },
   })
-  expect(created.ok(), `POST /income_schedule answered ${created.status()}`).toBe(true)
+  expect(
+    created.ok(),
+    `POST /income_schedule answered ${created.status()}: ${await created.text()}`,
+  ).toBe(true)
   return (await created.json()) as IncomeSchedule
 }
 

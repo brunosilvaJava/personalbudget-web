@@ -9,7 +9,6 @@ import {
   createAnchor,
   moneyPattern,
   shiftDate,
-  shiftMonth,
   todayIso,
   unique,
   type PayCycle,
@@ -33,17 +32,6 @@ interface Snapshot {
 test.setTimeout(120_000)
 test.use({ actionTimeout: 10_000 })
 
-/**
- * The days back from today of a boundary that exists in every month (up to 28), so the anchor
- * schedule needs no holiday calendar and the cycle that ends there ended some days ago.
- */
-function pastBoundaryBack(today: string): number {
-  for (let back = 12; back <= 15; back += 1) {
-    if (Number(shiftDate(today, -back).slice(8)) <= 28) return back
-  }
-  throw new Error('four days in a row cannot all be after the 28th')
-}
-
 async function previewOf(request: APIRequestContext, cycle: PayCycle): Promise<ClosurePreview> {
   const response = await request.post(`/api/pay_cycle/${cycle.code}/closure/preview`)
   expect(response.ok(), `closure preview answered ${response.status()}`).toBe(true)
@@ -65,17 +53,23 @@ test('closes a cycle that ended, locks its movements and reopens it', async ({
   test.skip(!isMobile, 'the cycle that ended can only be created once on a shared database')
 
   const today = todayIso()
-  const back = pastBoundaryBack(today)
-  const boundary = shiftDate(today, -back)
-  // The first cycle starts two weeks before the boundary that ends it (the back accepts up to 31
-  // days back), and the anchor pays from the month before, so the cycle has no pendency.
+  // The back does not accept an anchor schedule that starts before this month, so the boundary
+  // that ends the cycle is the first day of this month: it is never in the future, and a cycle
+  // that ends on it (the end is exclusive) has ended even on the 1st. The first cycle starts two
+  // weeks earlier (the back accepts an activation up to 31 days back).
+  const boundary = `${today.slice(0, 7)}-01`
   const initialDate = shiftDate(boundary, -14)
   let ended: PayCycle | undefined
   let movementCode: string | undefined
 
   try {
     await cleanUpCycles(request)
-    await createAnchor(request, unique(ANCHOR_PREFIX), -back, shiftMonth(boundary.slice(0, 7), -1))
+    // Day 1 of the month: `daysAhead` counts from today.
+    await createAnchor(
+      request,
+      unique(ANCHOR_PREFIX),
+      Number(boundary.slice(8)) - Number(today.slice(8)),
+    )
     const chain = await activateCycles(request, initialDate)
 
     const target = chain.find((cycle) => cycle.status === 'PENDING_CLOSE')
