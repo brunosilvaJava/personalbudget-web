@@ -40,3 +40,4 @@ if (!window.ResizeObserver) {
 Element.prototype.scrollIntoView ??= () => {}
 Element.prototype.hasPointerCapture ??= () => false
 Element.prototype.releasePointerCapture ??= () => {}
+Element.prototype.setPointerCapture ??= () => {}
