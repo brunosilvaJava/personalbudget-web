@@ -30,13 +30,17 @@ export function isRetryable(error: unknown): boolean {
 export function applyApiErrors<T extends FieldValues>(
   error: unknown,
   setError: UseFormSetError<T>,
-  fields: readonly Path<T>[],
+  /**
+   * The request's field names. They need not be form fields: a key like `days`, which the form
+   * splits into one control per recurrence, still gets an error by path that the form reads.
+   */
+  fields: readonly string[],
 ): string | null {
   if (!(error instanceof ApiError) || error.status !== 400) return errorMessage(error)
 
   const leftovers: string[] = []
   for (const [key, message] of Object.entries(error.validations)) {
-    if ((fields as readonly string[]).includes(key)) {
+    if (fields.includes(key)) {
       setError(key as Path<T>, { type: 'server', message })
     } else {
       leftovers.push(message)

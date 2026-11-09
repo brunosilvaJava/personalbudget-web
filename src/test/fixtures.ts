@@ -5,6 +5,8 @@ import type {
   CategoryResponse,
   CreditCardResponse,
   FinancialMovementResponse,
+  FixedBillResponse,
+  InstallmentBillResponse,
   Page,
   PayCycleResponse,
 } from '@/api/contracts'
@@ -177,4 +179,41 @@ export const cards = {
     default_account_code: null,
     status: 'ACTIVE',
   } satisfies CreditCardResponse,
+}
+
+export function fixedBill(overrides: Partial<FixedBillResponse> = {}): FixedBillResponse {
+  return {
+    code: code('fb'),
+    operation_type: 'DEBIT',
+    description: 'Aluguel',
+    amount: 1500,
+    recurrence_type: 'MONTHLY',
+    days: [5],
+    flg_leap_year: false,
+    reference_year: null,
+    status: 'ACTIVE',
+    start_date: '2026-01-05',
+    end_date: null,
+    next_due_date: '2026-12-05',
+    category_code: null,
+    ...overrides,
+  }
+}
+
+export function installmentBill(
+  overrides: Partial<InstallmentBillResponse> = {},
+): InstallmentBillResponse {
+  return {
+    code: code('ib'),
+    operation_type: 'DEBIT',
+    description: 'Carnê da loja',
+    amount: 150,
+    status: 'PENDING',
+    purchase_date: '2026-10-15',
+    installment_total: 10,
+    installment_count: 2,
+    next_installment_date: '2026-12-15',
+    category_code: null,
+    ...overrides,
+  }
 }
