@@ -102,3 +102,110 @@ export function shiftDate(date: string, days: number): string {
   const [year, month, day] = date.split('-').map(Number) as [number, number, number]
   return new Date(Date.UTC(year, month - 1, day + days)).toISOString().slice(0, 10)
 }
+
+// ───────────────────────── pay cycles, shared by the specs that need them ─────────────────────────
+
+export interface PayCycleConfig {
+  mode: 'CALENDAR_MONTH' | 'PAY_CYCLE'
+  anchor_schedule_code: string | null
+  activation_date: string | null
+  version: number
+}
+
+export interface PayCycle {
+  code: string
+  label: string
+  start_date: string
+  end_date_exclusive: string
+  end_adjusted: boolean
+  status: string
+}
+
+export interface IncomeSchedule {
+  code: string
+  description: string
+}
+
+/** What every spec that creates an anchor schedule calls it, so the clean-up finds them. */
+export const ANCHOR_PREFIX = 'Âncora E2E'
+
+/** Turns the cycles off (the cycles that started stay as history) so the other specs see months. */
+export async function cyclesOff(request: APIRequestContext) {
+  const config = await apiGet<PayCycleConfig>(request, '/pay_cycle_config')
+  if (config.mode !== 'PAY_CYCLE') return
+  const response = await request.post('/api/pay_cycle_config/deactivation', {
+    data: { expected_version: config.version, justification: 'Limpeza do teste E2E' },
+  })
+  expect(response.ok(), `deactivation answered ${response.status()}`).toBe(true)
+}
+
+/**
+ * The cycles off and no anchor schedule of the E2E left active: the anchor cannot be inactivated
+ * while the cycles are on, and there can be only one active anchor on the shared database.
+ */
+export async function cleanUpCycles(request: APIRequestContext) {
+  await cyclesOff(request)
+  const schedules = await apiGet<IncomeSchedule[]>(request, '/income_schedule', {
+    status: 'ACTIVE',
+  })
+  for (const schedule of schedules.filter((item) => item.description.startsWith(ANCHOR_PREFIX))) {
+    await request.patch(`/api/income_schedule/${schedule.code}/inactivate`)
+  }
+}
+
+/**
+ * An anchor schedule that pays on a day `daysAhead` days from now, so the first cycle is short and a
+ * later activation (the other viewport runs the same specs) can start where it ends, within the 31
+ * days the back accepts. "Keep" needs no holiday calendar: the dates are the same on any database.
+ */
+export async function createAnchor(
+  request: APIRequestContext,
+  description: string,
+  daysAhead = 10,
+): Promise<IncomeSchedule> {
+  const today = todayIso()
+  const created = await request.post('/api/income_schedule', {
+    data: {
+      description,
+      amount: 1000,
+      rule_type: 'FIXED_DAY',
+      rule_value: Number(shiftDate(today, daysAhead).slice(8)),
+      business_week: 'MONDAY_TO_FRIDAY',
+      non_business_day_policy: 'KEEP',
+      start_month: today.slice(0, 7),
+      anchor: true,
+    },
+  })
+  expect(created.ok(), `POST /income_schedule answered ${created.status()}`).toBe(true)
+  return (await created.json()) as IncomeSchedule
+}
+
+/** The first day an activation may use: today, or the end of the last cycle that exists. */
+export async function firstActivationDay(request: APIRequestContext): Promise<string> {
+  const today = todayIso()
+  const history = await apiGet<PayCycle[]>(request, '/pay_cycle')
+  const lastEnd = history
+    .map((cycle) => cycle.end_date_exclusive)
+    .sort()
+    .at(-1)
+  return lastEnd && lastEnd > today ? lastEnd : today
+}
+
+/** Activates the cycles through the API (preview, then the version it answered) and returns the chain. */
+export async function activateCycles(request: APIRequestContext): Promise<PayCycle[]> {
+  const firstDay = await firstActivationDay(request)
+  const preview = await request.post('/api/pay_cycle_config/activation/preview', {
+    data: { initial_date: firstDay },
+  })
+  expect(preview.ok(), `activation preview answered ${preview.status()}`).toBe(true)
+  const { expected_version } = (await preview.json()) as { expected_version: number }
+  const activation = await request.post('/api/pay_cycle_config/activation', {
+    data: { initial_date: firstDay, expected_version },
+  })
+  expect(activation.ok(), `activation answered ${activation.status()}`).toBe(true)
+  const chain = (await apiGet<PayCycle[]>(request, '/pay_cycle'))
+    .filter((cycle) => cycle.start_date >= firstDay)
+    .sort((a, b) => a.start_date.localeCompare(b.start_date))
+  expect(chain.length, 'cycles created by the activation').toBeGreaterThanOrEqual(3)
+  return chain
+}

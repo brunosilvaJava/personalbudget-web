@@ -231,9 +231,14 @@ function CurrentCycle({ cycle }: { cycle: PayCycleResponse }) {
       ) : (
         <CycleSummaryView summary={summary.data} />
       )}
-      <Button asChild variant="outline" className="h-11 self-start">
-        <Link to={`/ciclos/${cycle.code}`}>Ver o ciclo e o relatório completo</Link>
-      </Button>
+      <div className="flex flex-wrap gap-2">
+        <Button asChild variant="outline" className="h-11">
+          <Link to={`/ciclos/${cycle.code}`}>Ver o ciclo e o relatório completo</Link>
+        </Button>
+        <Button asChild variant="outline" className="h-11">
+          <Link to={`/ciclos/${cycle.code}/envelopes`}>Envelopes</Link>
+        </Button>
+      </div>
     </div>
   )
 }

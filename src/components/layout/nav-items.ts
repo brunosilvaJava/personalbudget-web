@@ -6,6 +6,8 @@ import {
   Ellipsis,
   HandCoins,
   House,
+  PiggyBank,
+  Telescope,
   Wallet,
   type LucideIcon,
 } from 'lucide-react'
@@ -32,4 +34,6 @@ export const MORE_ITEMS: readonly NavItem[] = [
   { to: '/recorrentes', label: 'Recorrentes', icon: CalendarClock },
   { to: '/receita', label: 'Receita', icon: HandCoins },
   { to: '/ciclos', label: 'Ciclos', icon: CalendarRange },
+  { to: '/envelopes', label: 'Envelopes', icon: PiggyBank },
+  { to: '/previsao', label: 'Previsão', icon: Telescope },
 ]

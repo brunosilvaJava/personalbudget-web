@@ -2,7 +2,10 @@ import { Navigate, type RouteObject } from 'react-router'
 
 import { DailyBalancePage } from '@/features/daily-balance/DailyBalancePage'
 import { DashboardPage } from '@/features/dashboard/DashboardPage'
+import { CurrentEnvelopesPage } from '@/features/envelopes/CurrentEnvelopesPage'
+import { EnvelopesPage } from '@/features/envelopes/EnvelopesPage'
 import { FixedBillsPage } from '@/features/fixed-bills/FixedBillsPage'
+import { ForecastPage } from '@/features/forecast/ForecastPage'
 import { HolidayCalendarPage } from '@/features/income/HolidayCalendarPage'
 import { IncomeLayout } from '@/features/income/IncomeLayout'
 import { IncomeSchedulePage } from '@/features/income/IncomeSchedulePage'
@@ -66,6 +69,9 @@ export const routes: RouteObject[] = [
       { path: 'receita/agenda/:code', element: <IncomeSchedulePage /> },
       { path: 'ciclos', element: <CyclesPage /> },
       { path: 'ciclos/:code', element: <CyclePage /> },
+      { path: 'ciclos/:code/envelopes', element: <EnvelopesPage /> },
+      { path: 'envelopes', element: <CurrentEnvelopesPage /> },
+      { path: 'previsao', element: <ForecastPage /> },
       { path: 'contas/*', element: <LegacyRecurringRedirect /> },
       { path: 'mais', element: <MorePage /> },
       { path: '*', element: <NotFoundPage /> },

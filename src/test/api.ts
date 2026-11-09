@@ -2,18 +2,19 @@ import { http, HttpResponse } from 'msw'
 
 import type {
   AccountResponse,
+  CashForecastResponse,
   CategoryGroupResponse,
   CategoryResponse,
   CreditCardResponse,
   PayCycleConfigResponse,
   PayCycleResponse,
 } from '@/api/contracts'
-import { accounts, allCategories, groups, payCycleConfig } from './fixtures'
+import { accounts, allCategories, cashForecast, groups, payCycleConfig } from './fixtures'
 import { server } from './server'
 
 /**
  * Handlers most screens need: health, categories, accounts (only the default one), cards (none) and
- * the current cycle (none) and the cycle configuration (off). Tests that need more override them with server.use.
+ * the current cycle (none), the cycle configuration (off) and a comfortable cash forecast. Tests that need more override them with server.use.
  */
 export function mockCommonApi(
   options: {
@@ -23,6 +24,7 @@ export function mockCommonApi(
     payCycleConfig?: PayCycleConfigResponse
     accounts?: AccountResponse[]
     cards?: CreditCardResponse[]
+    forecast?: CashForecastResponse
   } = {},
 ) {
   server.use(
@@ -45,6 +47,7 @@ export function mockCommonApi(
         list.filter((card) => (statuses.length ? statuses : ['ACTIVE']).includes(card.status)),
       )
     }),
+    http.get('/api/forecast', () => HttpResponse.json(options.forecast ?? cashForecast())),
     http.get('/api/pay_cycle_config', () =>
       HttpResponse.json(options.payCycleConfig ?? payCycleConfig()),
     ),

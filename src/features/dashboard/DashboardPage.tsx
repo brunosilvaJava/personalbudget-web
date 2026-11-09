@@ -7,6 +7,7 @@ import { ErrorState } from '@/components/domain/ErrorState'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
+import { ForecastCard } from '@/features/forecast/ForecastCard'
 import { PeriodPicker } from '@/features/period/PeriodPicker'
 import { monthPeriod } from '@/features/period/period'
 import { useAccountBalances, useAllAccounts } from '@/features/wallet/queries'
@@ -33,6 +34,7 @@ export function DashboardPage() {
       <PageHeader title="Início" description="Seu dinheiro hoje e o movimento do mês" />
       <div className="flex flex-col gap-4">
         <AccountsBalanceCard />
+        <ForecastCard />
         {dashboard.data?.has_negative_balance_alert && <NegativeAlert dashboard={dashboard.data} />}
         <PeriodPicker
           period={monthPeriod(month)}

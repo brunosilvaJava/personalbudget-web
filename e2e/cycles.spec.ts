@@ -1,51 +1,18 @@
-import { expect, test, type APIRequestContext } from '@playwright/test'
+import { expect, test } from '@playwright/test'
 
-import { apiGet, brDate, shiftDate, todayIso, unique } from './helpers'
-
-interface Config {
-  mode: 'CALENDAR_MONTH' | 'PAY_CYCLE'
-  anchor_schedule_code: string | null
-  activation_date: string | null
-  version: number
-}
-
-interface Cycle {
-  code: string
-  label: string
-  start_date: string
-  end_date_exclusive: string
-  end_adjusted: boolean
-  status: string
-}
-
-interface Schedule {
-  code: string
-  description: string
-}
-
-const ANCHOR_PREFIX = 'Âncora E2E'
-
-/** Turns the cycles off (the cycles that started stay as history) so the other specs see months. */
-async function cyclesOff(request: APIRequestContext) {
-  const config = await apiGet<Config>(request, '/pay_cycle_config')
-  if (config.mode !== 'PAY_CYCLE') return
-  const response = await request.post('/api/pay_cycle_config/deactivation', {
-    data: { expected_version: config.version, justification: 'Limpeza do teste E2E' },
-  })
-  expect(response.ok(), `deactivation answered ${response.status()}`).toBe(true)
-}
-
-/**
- * The cycles off and no anchor schedule of this spec left active: the anchor cannot be inactivated
- * while the cycles are on, and there can be only one active anchor on the shared database.
- */
-async function cleanUp(request: APIRequestContext) {
-  await cyclesOff(request)
-  const schedules = await apiGet<Schedule[]>(request, '/income_schedule', { status: 'ACTIVE' })
-  for (const schedule of schedules.filter((item) => item.description.startsWith(ANCHOR_PREFIX))) {
-    await request.patch(`/api/income_schedule/${schedule.code}/inactivate`)
-  }
-}
+import {
+  ANCHOR_PREFIX,
+  apiGet,
+  brDate,
+  cleanUpCycles,
+  createAnchor,
+  firstActivationDay,
+  shiftDate,
+  todayIso,
+  unique,
+  type PayCycle as Cycle,
+  type PayCycleConfig as Config,
+} from './helpers'
 
 let failedCalls: string[] = []
 test.afterEach(() => {
@@ -62,10 +29,6 @@ test('activates the cycles on an anchor schedule, adjusts a boundary and turns t
 }) => {
   const description = unique(ANCHOR_PREFIX)
   const today = todayIso()
-  // The anchor falls 10 days from now, so the first cycle is short and a later activation (the other
-  // viewport runs this same spec) can start where it ends, within the 31 days the back accepts.
-  const anchorDay = Number(shiftDate(today, 10).slice(8))
-
   // What the page asked the back, in order: printed only when the test fails.
   const calls: string[] = []
   const startedAt = Date.now()
@@ -79,30 +42,11 @@ test('activates the cycles on an anchor schedule, adjusts a boundary and turns t
   })
 
   try {
-    await cleanUp(request)
-    const created = await request.post('/api/income_schedule', {
-      data: {
-        description,
-        amount: 1000,
-        rule_type: 'FIXED_DAY',
-        rule_value: anchorDay,
-        business_week: 'MONDAY_TO_FRIDAY',
-        // "Keep" needs no holiday calendar, so the dates are the same on any database.
-        non_business_day_policy: 'KEEP',
-        start_month: today.slice(0, 7),
-        anchor: true,
-      },
-    })
-    expect(created.ok(), `POST /income_schedule answered ${created.status()}`).toBe(true)
-    const anchor = (await created.json()) as Schedule
+    await cleanUpCycles(request)
+    const anchor = await createAnchor(request, description)
 
     // A new activation starts at or after the end of the last cycle that exists.
-    const history = await apiGet<Cycle[]>(request, '/pay_cycle')
-    const lastEnd = history
-      .map((cycle) => cycle.end_date_exclusive)
-      .sort()
-      .at(-1)
-    const firstDay = lastEnd && lastEnd > today ? lastEnd : today
+    const firstDay = await firstActivationDay(request)
 
     // The cycles are off: see the first ones, then turn them on.
     await page.goto('/ciclos')
@@ -197,6 +141,6 @@ test('activates the cycles on an anchor schedule, adjusts a boundary and turns t
     })
   } finally {
     failedCalls = calls
-    await cleanUp(request)
+    await cleanUpCycles(request)
   }
 })
