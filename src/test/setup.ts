@@ -1,8 +1,12 @@
 import '@testing-library/jest-dom/vitest'
-import { cleanup } from '@testing-library/react'
+import { cleanup, configure } from '@testing-library/react'
 import { afterAll, afterEach, beforeAll } from 'vitest'
 
 import { server } from './server'
+
+// A write waits for the refetch of every active query before its callbacks run (the toast, the sheet
+// closing), so on a slow CI runner the default 1 s of findBy/waitFor is not always enough.
+configure({ asyncUtilTimeout: 4000 })
 
 // A request without a handler is a bug in the test: fail instead of hitting the network.
 beforeAll(() => server.listen({ onUnhandledFrame: 'error' }))

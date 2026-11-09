@@ -85,7 +85,7 @@ test('activates the cycles on an anchor schedule, adjusts a boundary and turns t
 
     // The cycles are off: see the first ones, then turn them on.
     await page.goto('/ciclos')
-    await expect(page.getByText('Mês do calendário')).toBeVisible()
+    await expect(page.getByText('Mês do calendário', { exact: true })).toBeVisible()
     await page.getByRole('button', { name: 'Ativar os ciclos' }).click()
     const activation = page.getByRole('dialog', { name: 'Ativar os ciclos' })
     await expect(activation.getByText(description, { exact: true })).toBeVisible()
@@ -96,8 +96,8 @@ test('activates the cycles on an anchor schedule, adjusts a boundary and turns t
     await expect(activation.getByText(`Os ciclos começam em ${brDate(firstDay)}`)).toBeVisible()
     await activation.getByRole('button', { name: 'Ativar os ciclos' }).click()
 
-    await expect(page.getByText('Ciclos da receita âncora')).toBeVisible()
-    await expect(page.getByText(`ligados desde ${brDate(firstDay)}`)).toBeVisible()
+    await expect(page.getByText('Ciclos da receita âncora', { exact: true })).toBeVisible()
+    await expect(page.getByText(`ligados desde ${brDate(firstDay)}`, { exact: true })).toBeVisible()
     const config = await apiGet<Config>(request, '/pay_cycle_config')
     expect(config).toMatchObject({
       mode: 'PAY_CYCLE',
@@ -144,11 +144,11 @@ test('activates the cycles on an anchor schedule, adjusts a boundary and turns t
     await expect(page.getByText('Virada ajustada.')).toBeVisible()
     const moved = await apiGet<Cycle>(request, `/pay_cycle/${cycle.code}`)
     expect(moved).toMatchObject({ end_date_exclusive: newEnd, end_adjusted: true })
-    const history2 = page.getByRole('region', { name: 'Histórico de ajustes' })
+    const adjustments = page.getByRole('region', { name: 'Histórico de ajustes' })
     await expect(
-      history2.getByText(`${brDate(cycle.end_date_exclusive)} → ${brDate(newEnd)}`),
+      adjustments.getByText(`${brDate(cycle.end_date_exclusive)} → ${brDate(newEnd)}`),
     ).toBeVisible()
-    await expect(history2.getByText('“Ajuste do teste E2E”')).toBeVisible()
+    await expect(adjustments.getByText('“Ajuste do teste E2E”')).toBeVisible()
 
     // The anchor schedule points to the transition instead of letting its rule change.
     await page.goto(`/receita/agenda/${anchor.code}`)
@@ -165,7 +165,7 @@ test('activates the cycles on an anchor schedule, adjusts a boundary and turns t
     await deactivation.getByLabel('Motivo').fill('Fim do teste E2E')
     await deactivation.getByRole('button', { name: 'Desligar os ciclos' }).click()
     await expect(page.getByText('Ciclos desligados.')).toBeVisible()
-    await expect(page.getByText('Mês do calendário')).toBeVisible()
+    await expect(page.getByText('Mês do calendário', { exact: true })).toBeVisible()
     expect(await apiGet<Config>(request, '/pay_cycle_config')).toMatchObject({
       mode: 'CALENDAR_MONTH',
     })
