@@ -332,17 +332,17 @@ function Details({
         destructive
         pending={remove.isPending}
         onConfirm={() =>
-          remove.mutate(movement.code, {
-            onSuccess: () => {
+          remove.mutateAsync(movement.code).then(
+            () => {
               setConfirmDelete(false)
               toast.success('Movimentação excluída.')
               onDeleted()
             },
-            onError: (error) => {
+            (error) => {
               setConfirmDelete(false)
               setDeleteError(errorMessage(error))
             },
-          })
+          )
         }
       />
     </>
@@ -446,17 +446,14 @@ function SettlementList({ movement }: { movement: FinancialMovementResponse }) {
         onConfirm={() => {
           if (!toReverse) return
           setError(null)
-          reverse.mutate(
-            { movementCode: movement.code, settlementCode: toReverse.code },
-            {
-              onSuccess: () => {
-                setToReverse(null)
-                toast.success('Estorno registrado.')
-              },
-              onError: (reverseError) => {
-                setToReverse(null)
-                setError(errorMessage(reverseError))
-              },
+          reverse.mutateAsync({ movementCode: movement.code, settlementCode: toReverse.code }).then(
+            () => {
+              setToReverse(null)
+              toast.success('Estorno registrado.')
+            },
+            (reverseError) => {
+              setToReverse(null)
+              setError(errorMessage(reverseError))
             },
           )
         }}
@@ -491,23 +488,22 @@ function PayForm({
         event.preventDefault()
         if (!date) return
         setError(null)
-        pay.mutate(
-          {
+        pay
+          .mutateAsync({
             code: movement.code,
             body: {
               amount: remaining,
               effective_date: date,
               ...(accountCode ? { account_code: accountCode } : {}),
             },
-          },
-          {
-            onSuccess: () => {
+          })
+          .then(
+            () => {
               toast.success(credit ? 'Recebimento registrado.' : 'Pagamento registrado.')
               onDone()
             },
-            onError: (payError) => setError(errorMessage(payError)),
-          },
-        )
+            (payError) => setError(errorMessage(payError)),
+          )
       }}
     >
       <SheetBody>

@@ -220,15 +220,12 @@ function FixedBillDetails({
           className="h-11"
           disabled={setActive.isPending || !online}
           onClick={() =>
-            setActive.mutate(
-              { code: bill.code, active: !active },
-              {
-                onSuccess: () => {
-                  toast.success(active ? 'Conta fixa inativada.' : 'Conta fixa ativada.')
-                  onDone()
-                },
-                onError: (mutationError) => setError(errorMessage(mutationError)),
+            setActive.mutateAsync({ code: bill.code, active: !active }).then(
+              () => {
+                toast.success(active ? 'Conta fixa inativada.' : 'Conta fixa ativada.')
+                onDone()
               },
+              (mutationError) => setError(errorMessage(mutationError)),
             )
           }
         >
@@ -259,17 +256,17 @@ function FixedBillDetails({
         destructive
         pending={remove.isPending}
         onConfirm={() =>
-          remove.mutate(bill.code, {
-            onSuccess: () => {
+          remove.mutateAsync(bill.code).then(
+            () => {
               setConfirmDelete(false)
               toast.success('Conta fixa excluída.')
               onDone()
             },
-            onError: (deleteError) => {
+            (deleteError) => {
               setConfirmDelete(false)
               setError(errorMessage(deleteError))
             },
-          })
+          )
         }
       />
     </>

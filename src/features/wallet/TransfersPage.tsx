@@ -127,16 +127,16 @@ export function TransfersPage() {
         onConfirm={() => {
           if (!toReverse) return
           setError(null)
-          reverse.mutate(toReverse.code, {
-            onSuccess: () => {
+          reverse.mutateAsync(toReverse.code).then(
+            () => {
               setToReverse(null)
               toast.success('Transferência estornada.')
             },
-            onError: (reverseError) => {
+            (reverseError) => {
               setToReverse(null)
               setError(errorMessage(reverseError))
             },
-          })
+          )
         }}
       />
     </div>

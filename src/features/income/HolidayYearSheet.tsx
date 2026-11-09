@@ -115,15 +115,12 @@ function HolidayYearForm({
 
   const onSave = () => {
     setFormError(null)
-    save.mutate(
-      { year, body: { holidays: draft } },
-      {
-        onSuccess: () => {
-          toast.success(`Calendário de ${year} revisado.`)
-          onDone()
-        },
-        onError: (error) => setFormError(errorMessage(error)),
+    save.mutateAsync({ year, body: { holidays: draft } }).then(
+      () => {
+        toast.success(`Calendário de ${year} revisado.`)
+        onDone()
       },
+      (error) => setFormError(errorMessage(error)),
     )
   }
 
