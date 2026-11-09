@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { FinancialMovementRequest, MovementSettlementRequest } from '@/api/contracts'
 import { mockCommonApi } from '@/test/api'
-import { categories, movement, page } from '@/test/fixtures'
+import { accounts, cards, categories, movement, page } from '@/test/fixtures'
 import { renderApp } from '@/test/render'
 import { server } from '@/test/server'
 
@@ -67,7 +67,11 @@ describe('QuickLaunchSheet', () => {
       movement_date: '2026-11-10T12:30:00',
       due_date: '2026-11-10T12:30:00',
     })
-    expect(settled[0]).toEqual({ amount: 18.4, effective_date: '2026-11-10' })
+    expect(settled[0]).toEqual({
+      amount: 18.4,
+      effective_date: '2026-11-10',
+      account_code: accounts.main.code,
+    })
     expect(await screen.findByText(/Despesa de R\$\s18,40 lançada e paga/)).toBeInTheDocument()
     await waitFor(() => expect(router.state.location.search).toBe(''))
   })
@@ -102,10 +106,8 @@ describe('QuickLaunchSheet', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Tentar pagar de novo' }))
 
     expect(await screen.findByText('Pagamento registrado.')).toBeInTheDocument()
-    expect(settled).toEqual([
-      { amount: 60, effective_date: '2026-11-10' },
-      { amount: 60, effective_date: '2026-11-10' },
-    ])
+    const expected = { amount: 60, effective_date: '2026-11-10', account_code: accounts.main.code }
+    expect(settled).toEqual([expected, expected])
     expect(created).toHaveLength(1)
   })
 
@@ -160,5 +162,54 @@ describe('QuickLaunchSheet', () => {
     expect(screen.queryByRole('option', { name: 'Mercado' })).not.toBeInTheDocument()
     await userEvent.keyboard('{Escape}')
     expect(within(sheet).getByRole('switch', { name: 'Ainda não recebi' })).toBeInTheDocument()
+  })
+
+  it('should launch on a card as a one-installment purchase and remember the card', async () => {
+    mockCommonApi({ accounts: [accounts.main, accounts.wallet], cards: [cards.nubank] })
+    const purchases: unknown[] = []
+    server.use(
+      http.get('/api/financial_movement', () => HttpResponse.json(page([]))),
+      http.post('/api/card_purchase', async ({ request }) => {
+        const body = (await request.json()) as Record<string, unknown>
+        purchases.push(body)
+        return HttpResponse.json(
+          {
+            code: 'p1',
+            card_code: cards.nubank.code,
+            description: body.description,
+            purchase_date: body.purchase_date,
+            installments: 1,
+            installment_amount: body.installment_amount,
+            total_amount: body.installment_amount,
+            category_code: null,
+            installment_list: [{ invoice_reference_month: '2026-12' }],
+          },
+          { status: 201 },
+        )
+      }),
+    )
+    localStorage.removeItem('personalbudget.paidWith')
+    const { sheet } = await openLaunch()
+
+    await userEvent.type(within(sheet).getByLabelText('Valor'), '49,90')
+    await userEvent.type(within(sheet).getByLabelText('Descrição'), 'Livro novo')
+    await userEvent.click(within(sheet).getByRole('combobox', { name: 'Pagou com' }))
+    await userEvent.click(await screen.findByRole('option', { name: 'Nubank' }))
+    expect(within(sheet).queryByRole('switch')).not.toBeInTheDocument()
+    await userEvent.click(within(sheet).getByRole('button', { name: 'Lançar no cartão' }))
+
+    await waitFor(() =>
+      expect(purchases).toEqual([
+        {
+          card_code: cards.nubank.code,
+          description: 'Livro novo',
+          purchase_date: '2026-11-10',
+          installments: 1,
+          installment_amount: 49.9,
+        },
+      ]),
+    )
+    expect(await screen.findByText(/lançada no Nubank, fatura de dez\/2026/)).toBeInTheDocument()
+    expect(localStorage.getItem('personalbudget.paidWith')).toBe(`card:${cards.nubank.code}`)
   })
 })

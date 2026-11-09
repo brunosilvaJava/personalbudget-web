@@ -3,6 +3,7 @@ import type {
   AccountTransferResponse,
   CategoryGroupResponse,
   CategoryResponse,
+  CreditCardResponse,
   FinancialMovementResponse,
   Page,
   PayCycleResponse,
@@ -164,4 +165,16 @@ export function transfer(
     version: 0,
     ...overrides,
   }
+}
+
+export const cards = {
+  nubank: {
+    code: 'k0000001-0000-4000-8000-000000000001',
+    name: 'Nubank',
+    closing_day: 3,
+    due_day: 10,
+    credit_limit: 5000,
+    default_account_code: null,
+    status: 'ACTIVE',
+  } satisfies CreditCardResponse,
 }

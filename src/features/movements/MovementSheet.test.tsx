@@ -9,7 +9,7 @@ import type {
   MovementSettlementResponse,
 } from '@/api/contracts'
 import { mockCommonApi } from '@/test/api'
-import { categories, movement, page } from '@/test/fixtures'
+import { accounts, categories, movement, page } from '@/test/fixtures'
 import { renderApp } from '@/test/render'
 import { server } from '@/test/server'
 
@@ -91,7 +91,11 @@ describe('MovementSheet', () => {
     expect(within(sheet).getByLabelText('Pago em')).toHaveValue('2026-11-10')
     await userEvent.click(within(sheet).getByRole('button', { name: 'Confirmar pagamento' }))
 
-    await waitFor(() => expect(calls.paid).toEqual([{ amount: 900, effective_date: '2026-11-10' }]))
+    await waitFor(() =>
+      expect(calls.paid).toEqual([
+        { amount: 900, effective_date: '2026-11-10', account_code: accounts.main.code },
+      ]),
+    )
     expect(await screen.findByText('Pagamento registrado.')).toBeInTheDocument()
   })
 
@@ -198,6 +202,10 @@ describe('MovementSheet', () => {
     const sheet = await openMovement('Geladeira')
 
     expect(within(sheet).getByText(/é paga junto com a fatura/)).toBeInTheDocument()
+    expect(within(sheet).getByRole('link', { name: 'Ver fatura' })).toHaveAttribute(
+      'href',
+      '/carteira/faturas/i1',
+    )
     expect(within(sheet).queryByRole('button', { name: /Pagar/ })).not.toBeInTheDocument()
     expect(within(sheet).queryByRole('button', { name: 'Editar' })).not.toBeInTheDocument()
     expect(within(sheet).queryByRole('button', { name: 'Excluir' })).not.toBeInTheDocument()

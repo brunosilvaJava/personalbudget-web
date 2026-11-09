@@ -26,8 +26,10 @@ describe('quick launch', () => {
       movement_date: '2026-11-08',
       unpaid: false,
       due_date: '',
+      paid_with: '',
     })
-    expect(toQuickLaunchRequests(values)).toEqual({
+    expect(toQuickLaunchRequests(values, { kind: 'account', code: 'a1' })).toEqual({
+      kind: 'movement',
       movement: {
         operation_type: 'DEBIT',
         description: 'Feira',
@@ -35,7 +37,31 @@ describe('quick launch', () => {
         movement_date: '2026-11-08T12:00:00',
         due_date: '2026-11-08T12:00:00',
       },
-      settlement: { amount: 10.5, effective_date: '2026-11-08' },
+      settlement: { amount: 10.5, effective_date: '2026-11-08', account_code: 'a1' },
+    })
+  })
+
+  it('should turn a launch paid with a card into a one-installment purchase', () => {
+    const values = quickLaunchSchema.parse({
+      operation_type: 'DEBIT',
+      amount: 4990,
+      description: 'Livro',
+      category_code: 'c1',
+      movement_date: '2026-11-10',
+      unpaid: false,
+      due_date: '',
+      paid_with: 'card:k1',
+    })
+    expect(toQuickLaunchRequests(values, { kind: 'card', code: 'k1' })).toEqual({
+      kind: 'card',
+      purchase: {
+        card_code: 'k1',
+        description: 'Livro',
+        purchase_date: '2026-11-10',
+        installments: 1,
+        installment_amount: 49.9,
+        category_code: 'c1',
+      },
     })
   })
 
@@ -47,6 +73,7 @@ describe('quick launch', () => {
       category_code: null,
       movement_date: '2026-11-10',
       due_date: '',
+      paid_with: '',
     }
     expect(quickLaunchSchema.safeParse({ ...base, unpaid: false }).success).toBe(true)
     expect(quickLaunchSchema.safeParse({ ...base, unpaid: true }).success).toBe(false)

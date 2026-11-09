@@ -73,3 +73,8 @@ export function formatDateRange(start: ISODate, end: ISODate): string {
     ? `${formatShortDate(start)} a ${formatShortDate(end)}`
     : `${formatDate(start)} a ${formatDate(end)}`
 }
+
+/** "2026-12" → "dez/2026" (invoices) */
+export function formatShortMonth(month: YearMonth): string {
+  return format(parseApiDate(`${month}-01`), 'MMM/yyyy', { locale: ptBR })
+}

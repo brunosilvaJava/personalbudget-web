@@ -1,6 +1,6 @@
 import { Banknote, Landmark, PiggyBank, Wallet, type LucideIcon } from 'lucide-react'
 
-import type { AccountType } from '@/api/contracts'
+import type { AccountType, CardInvoiceState } from '@/api/contracts'
 
 export const ACCOUNT_TYPE_LABEL: Record<AccountType, string> = {
   CHECKING: 'Conta corrente',
@@ -14,4 +14,10 @@ export const ACCOUNT_TYPE_ICON: Record<AccountType, LucideIcon> = {
   CASH: Banknote,
   SAVINGS: PiggyBank,
   OTHER: Wallet,
+}
+
+export const INVOICE_STATE_LABEL: Record<CardInvoiceState, string> = {
+  OPEN: 'Aberta',
+  CLOSED: 'Fechada',
+  PAID: 'Paga',
 }
