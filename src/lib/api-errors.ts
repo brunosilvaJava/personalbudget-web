@@ -45,3 +45,8 @@ export function applyApiErrors<T extends FieldValues>(
   if (Object.keys(error.validations).length === 0) return error.message
   return leftovers.length > 0 ? leftovers.join(' ') : null
 }
+
+/** The record is gone (deleted elsewhere, or a stale link). */
+export function isNotFound(error: unknown): boolean {
+  return error instanceof ApiError && error.isNotFound
+}

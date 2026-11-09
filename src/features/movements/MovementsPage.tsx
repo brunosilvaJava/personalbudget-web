@@ -1,5 +1,7 @@
 import { Search, SlidersHorizontal } from 'lucide-react'
 import { useEffect, useState } from 'react'
+
+import type { FinancialMovementResponse } from '@/api/contracts'
 import { useSearchParams } from 'react-router'
 
 import { PageHeader } from '@/components/layout/PageHeader'
@@ -18,6 +20,7 @@ import {
 } from './filters'
 import { MovementFiltersSheet } from './MovementFiltersSheet'
 import { MovementList, MovementListSkeleton } from './MovementList'
+import { MovementSheet } from './MovementSheet'
 
 const SEARCH_DEBOUNCE_MS = 400
 
@@ -27,6 +30,7 @@ export function MovementsPage() {
   const period = readPeriod(searchParams) ?? fallbackPeriod
   const filters = readFilters(searchParams)
   const [filtersOpen, setFiltersOpen] = useState(false)
+  const [selected, setSelected] = useState<FinancialMovementResponse | null>(null)
 
   function update(nextFilters: MovementFilters, nextPeriod: Period | undefined, replace = false) {
     let next = writeFilters(searchParams, nextFilters)
@@ -91,10 +95,13 @@ export function MovementsPage() {
           filters={toListFilters(period, filters)}
           filtered={filtered}
           onClearFilters={() => update({ ...EMPTY_FILTERS }, period)}
+          onSelect={setSelected}
         />
       ) : (
         <MovementListSkeleton />
       )}
+
+      <MovementSheet movement={selected} onClose={() => setSelected(null)} />
 
       {period && (
         <MovementFiltersSheet
