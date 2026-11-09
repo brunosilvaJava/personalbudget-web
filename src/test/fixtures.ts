@@ -15,9 +15,11 @@ import type {
   InstallmentBillResponse,
   Page,
   PayCycleAdjustmentResponse,
+  PayCycleClosurePreviewResponse,
   PayCycleConfigResponse,
   PayCyclePendingResponse,
   PayCycleResponse,
+  PayCycleSnapshotResponse,
   PayCycleSummaryResponse,
 } from '@/api/contracts'
 
@@ -207,6 +209,54 @@ export function payCycleAdjustment(
     expected_next_version: 1,
     expected_config_version: null,
     created_date: '2026-11-09T10:00:00',
+    ...overrides,
+  }
+}
+
+/** The first closure of the cycle: what a cycle with the payCycleSummary numbers would have frozen. */
+export function payCycleSnapshot(
+  overrides: Partial<PayCycleSnapshotResponse> = {},
+): PayCycleSnapshotResponse {
+  return {
+    code: code('snap'),
+    cycle_code: 'p0000001-0000-4000-8000-000000000001',
+    snapshot_version: 1,
+    cycle_version: 3,
+    closed_at: '2026-11-06T17:30:00Z',
+    recognized_revenue: 5000,
+    recognized_expense: 3100,
+    projected_revenue: 5000,
+    projected_expense: 3100,
+    categories: [
+      {
+        category_code: null,
+        category_name: 'Salário',
+        operation_type: 'CREDIT',
+        recognized_amount: 5000,
+        projected_amount: 5000,
+      },
+      {
+        category_code: null,
+        category_name: 'Mercado',
+        operation_type: 'DEBIT',
+        recognized_amount: 3100,
+        projected_amount: 3100,
+      },
+    ],
+    ...overrides,
+  }
+}
+
+/** A cycle that can be closed: nothing blocks it. */
+export function closurePreview(
+  overrides: Partial<PayCycleClosurePreviewResponse> = {},
+): PayCycleClosurePreviewResponse {
+  return {
+    summary: payCycleSummary(),
+    expected_version: 2,
+    can_close: true,
+    blockers: [],
+    late_movement_codes: [],
     ...overrides,
   }
 }

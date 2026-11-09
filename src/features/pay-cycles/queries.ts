@@ -1,19 +1,25 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 
 import {
   activatePayCycles,
   adjustEnd,
+  closeCycle,
   deactivatePayCycles,
+  getPayCycleByDate,
   getPayCycleConfig,
   getPayCycleSummary,
   listPayCycleAdjustments,
   listPayCycles,
+  listSnapshots,
   previewActivation,
   previewAnchorTransition,
+  previewClosure,
   previewEndAdjustment,
+  reopenCycle,
   transitionAnchor,
 } from '@/api/payCycles'
+import { getMovement } from '@/api/financialMovements'
 import type {
   PayCycleActivationPreviewRequest,
   PayCycleActivationRequest,
@@ -22,6 +28,8 @@ import type {
   PayCycleDeactivationRequest,
   PayCycleEndAdjustmentPreviewRequest,
   PayCycleEndAdjustmentRequest,
+  ISODate,
+  PayCycleResponse,
   UUID,
 } from '@/api/contracts'
 import { formatDate } from '@/lib/format'
@@ -57,6 +65,58 @@ export function usePayCycleAdjustments(code: UUID) {
     queryKey: queryKeys.payCycleAdjustments(code),
     queryFn: ({ signal }) => listPayCycleAdjustments(code, signal),
   })
+}
+
+/** Every snapshot of the cycle (one per closure), empty while it was never closed. */
+export function useCycleSnapshots(code: UUID) {
+  return useQuery({
+    queryKey: queryKeys.payCycleSnapshots(code),
+    queryFn: ({ signal }) => listSnapshots(code, signal),
+  })
+}
+
+/**
+ * What closing would freeze and what blocks it. A POST that only reads, kept as a query so it
+ * reloads with the data around it. It is never kept: the `expected_version` it carries is only
+ * good while nothing changed, so every opening asks again.
+ */
+export function useClosurePreview(code: UUID, enabled: boolean) {
+  return useQuery({
+    queryKey: queryKeys.payCycleClosurePreview(code),
+    queryFn: ({ signal }) => previewClosure(code, signal),
+    enabled,
+    staleTime: 0,
+    gcTime: 0,
+  })
+}
+
+/**
+ * The movements the preview names, one by one (it only sends their codes). Only the first `limit`
+ * are asked for; the rest are counted by the caller.
+ */
+export function useMovementsByCode(codes: readonly UUID[], limit: number) {
+  return useQueries({
+    queries: codes.slice(0, limit).map((code) => ({
+      queryKey: queryKeys.movement(code),
+      queryFn: ({ signal }: { signal: AbortSignal }) => getMovement(code, signal),
+      staleTime: 10_000,
+    })),
+  })
+}
+
+/**
+ * The cycle that holds a competence date when it is CLOSED, else null. Off unless the cycles are
+ * on (otherwise there is nothing to ask) and while the date is not known.
+ */
+export function useClosedCycle(date: ISODate | undefined): PayCycleResponse | null {
+  const config = usePayCycleConfig()
+  const cycle = useQuery({
+    queryKey: queryKeys.payCycleByDate(date ?? ''),
+    queryFn: ({ signal }) => getPayCycleByDate(date!, signal),
+    enabled: config.data?.mode === 'PAY_CYCLE' && Boolean(date),
+    staleTime: 60_000,
+  })
+  return cycle.data?.status === 'CLOSED' ? cycle.data : null
 }
 
 // Previews change nothing, so they invalidate nothing.
@@ -112,3 +172,36 @@ export const useTransitionAnchor = () =>
     (body: PayCycleAnchorTransitionRequest) => transitionAnchor(body),
     () => 'Receita âncora atualizada.',
   )
+
+/**
+ * Closing freezes the cycle in a snapshot; reopening lets it change again. Both refresh the whole
+ * group (status, snapshots, the lists that depend on the period) and, when the back refuses (a
+ * stale version, a blocker that appeared), reload it as well, so what the person sees is what the
+ * back now has. The toast is here for the same reason as above: the cycle page changes shape when
+ * the status does, and a callback given to `mutate` does not run once its component is gone.
+ */
+export function useCloseCycle() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ code, expectedVersion }: { code: UUID; expectedVersion: number }) =>
+      closeCycle(code, { expected_version: expectedVersion }),
+    onSuccess: async (data) => {
+      toast.success(`Ciclo fechado. Fechamento versão ${data.snapshot.snapshot_version}.`)
+      await invalidatePayCycles(queryClient)
+    },
+    onError: () => invalidatePayCycles(queryClient),
+  })
+}
+
+export function useReopenCycle() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ code, expectedVersion }: { code: UUID; expectedVersion: number }) =>
+      reopenCycle(code, { expected_version: expectedVersion }),
+    onSuccess: async () => {
+      toast.success('Ciclo reaberto.')
+      await invalidatePayCycles(queryClient)
+    },
+    onError: () => invalidatePayCycles(queryClient),
+  })
+}

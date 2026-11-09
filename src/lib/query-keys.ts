@@ -76,6 +76,8 @@ export const queryKeys = {
   payCycleConfig: ['pay-cycle-config'] as const,
   payCycleSummary: (code: UUID) => ['pay-cycle-summary', code] as const,
   payCycleAdjustments: (code: UUID) => ['pay-cycle-adjustments', code] as const,
+  payCycleSnapshots: (code: UUID) => ['pay-cycle-snapshots', code] as const,
+  payCycleClosurePreview: (code: UUID) => ['pay-cycle-closure-preview', code] as const,
 
   envelopes: (cycleCode: UUID) => ['envelopes', cycleCode] as const,
   /** `until` null is the back's own horizon (the end of the current cycle, or of the month) */
@@ -135,6 +137,8 @@ const INCOME_ROOT_KEYS = [
   'pay-cycles',
   'pay-cycle-config',
   'pay-cycle-adjustments',
+  'pay-cycle-snapshots',
+  'pay-cycle-closure-preview',
 ] as const
 
 /** Called in the onSuccess of every write to an income schedule or to the holiday calendar. */
