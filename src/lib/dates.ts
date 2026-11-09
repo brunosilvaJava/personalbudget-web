@@ -1,4 +1,4 @@
-import { addMonths, endOfMonth, format, parseISO, startOfMonth } from 'date-fns'
+import { addDays, addMonths, endOfMonth, format, parseISO, startOfMonth } from 'date-fns'
 
 import type { ISODate, ISODateTime, YearMonth } from '@/api/contracts'
 
@@ -39,4 +39,62 @@ export function monthRange(month: YearMonth): { start: ISODate; end: ISODate } {
 /** The month `offset` months away from `month`, e.g. for the month picker arrows. */
 export function shiftMonth(month: YearMonth, offset: number): YearMonth {
   return toYearMonth(addMonths(parseISO(`${month}-01`), offset))
+}
+
+/** The date `days` days away, e.g. the day before a cycle starts. */
+export function shiftDate(date: ISODate, days: number): ISODate {
+  return toApiDate(addDays(parseISO(date), days))
+}
+
+/** The month of a date: "2026-11-10" → "2026-11". */
+export function monthOf(date: ISODate): YearMonth {
+  return date.slice(0, 7)
+}
+
+/** The date part of a LocalDateTime: "2026-11-10T15:30:00" → "2026-11-10". */
+export function dateOf(value: ISODate | ISODateTime): ISODate {
+  return value.slice(0, 10)
+}
+
+// ───────────────────────── "Today" is always Brasília ─────────────────────────
+
+/**
+ * The app's clock. "Today" and "now" are the wall clock in Brasília, as on the back (PR #59),
+ * even when the phone is in another time zone: a purchase at 22h in Lisbon is still "today" in
+ * Brasília's calendar, where the API decides LATE and due dates.
+ */
+export const APP_TIME_ZONE = 'America/Sao_Paulo'
+
+const wallClock = new Intl.DateTimeFormat('en-CA', {
+  timeZone: APP_TIME_ZONE,
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+  hour: '2-digit',
+  minute: '2-digit',
+  second: '2-digit',
+  hourCycle: 'h23',
+})
+
+function brasiliaParts(instant: Date): Record<string, string> {
+  const parts: Record<string, string> = {}
+  for (const { type, value } of wallClock.formatToParts(instant)) parts[type] = value
+  return parts
+}
+
+/** Today in Brasília, e.g. "2026-11-10". */
+export function todayIso(now: Date = new Date()): ISODate {
+  const p = brasiliaParts(now)
+  return `${p.year}-${p.month}-${p.day}`
+}
+
+/** Now in Brasília, without offset, e.g. "2026-11-10T15:30:00". */
+export function nowApiDateTime(now: Date = new Date()): ISODateTime {
+  const p = brasiliaParts(now)
+  return `${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}:${p.second}`
+}
+
+/** The current month in Brasília, e.g. "2026-11". */
+export function currentMonth(now: Date = new Date()): YearMonth {
+  return monthOf(todayIso(now))
 }

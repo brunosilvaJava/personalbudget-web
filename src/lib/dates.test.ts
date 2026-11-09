@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  currentMonth,
+  dateOf,
+  monthOf,
   monthRange,
+  nowApiDateTime,
+  shiftDate,
+  todayIso,
   parseApiDate,
   shiftMonth,
   toApiDate,
@@ -58,5 +64,22 @@ describe('months', () => {
   it('should shift months across years', () => {
     expect(shiftMonth('2026-12', 1)).toBe('2027-01')
     expect(shiftMonth('2026-01', -1)).toBe('2025-12')
+  })
+})
+
+describe('Brasília clock', () => {
+  it('should give the date in Brasília, not in UTC', () => {
+    // 02:30 UTC on the 10th is 23:30 of the 9th in Brasília.
+    const instant = new Date('2026-11-10T02:30:00Z')
+    expect(todayIso(instant)).toBe('2026-11-09')
+    expect(nowApiDateTime(instant)).toBe('2026-11-09T23:30:00')
+    expect(currentMonth(new Date('2026-12-01T01:00:00Z'))).toBe('2026-11')
+  })
+
+  it('should shift dates across months', () => {
+    expect(shiftDate('2026-11-30', 1)).toBe('2026-12-01')
+    expect(shiftDate('2026-11-05', -1)).toBe('2026-11-04')
+    expect(dateOf('2026-11-10T15:30:00')).toBe('2026-11-10')
+    expect(monthOf('2026-11-10')).toBe('2026-11')
   })
 })

@@ -26,3 +26,17 @@ if (!window.matchMedia) {
       dispatchEvent: () => false,
     }) as MediaQueryList
 }
+
+// jsdom has no ResizeObserver; Radix measures some controls (checkbox, select) with it.
+if (!window.ResizeObserver) {
+  window.ResizeObserver = class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  } as unknown as typeof ResizeObserver
+}
+
+// Radix Select and pointer-driven components call these, which jsdom lacks.
+Element.prototype.scrollIntoView ??= () => {}
+Element.prototype.hasPointerCapture ??= () => false
+Element.prototype.releasePointerCapture ??= () => {}

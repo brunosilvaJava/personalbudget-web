@@ -76,7 +76,7 @@ describe('request', () => {
         HttpResponse.json(
           {
             message: 'Campos inválidos',
-            validations: { amount_paid: 'deve ser maior que 0.01' },
+            validations: { amount: 'deve ser maior que 0.01' },
           },
           { status: 400 },
         ),
@@ -89,7 +89,7 @@ describe('request', () => {
     expect((error as ApiError).status).toBe(400)
     expect((error as ApiError).message).toBe('Campos inválidos')
     expect((error as ApiError).validations).toEqual({
-      amount_paid: 'deve ser maior que 0.01',
+      amount: 'deve ser maior que 0.01',
     })
   })
 

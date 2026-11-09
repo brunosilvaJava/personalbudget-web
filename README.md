@@ -59,11 +59,30 @@ npx shadcn@latest add sheet
 
 Os tokens de cor ficam em `src/index.css`: os do shadcn e três do domínio, `income`, `expense` e `warning`, com valores para o tema claro e o escuro. O tema segue o do sistema.
 
+## Contrato com o back
+
+`src/api/contracts.ts` é a cópia do doc "Contrato da API (front)". Para conferir contra o código do back (os dois repositórios lado a lado):
+
+```bash
+python3 scripts/check-contract.py ../personalbudget
+```
+
+O script compara os campos de cada interface com os records de DTO do back e sai com erro se algum campo existir só de um lado. A partir da Fase 5, a checagem com `openapi-typescript` roda no CI.
+
 ## Fases
 
+Uma PR por fase, empilhadas (cada uma sai da anterior).
+
 - [x] **Fase 0 · Fundação:** projeto, tema, client HTTP, contratos, proxy, navegação e CI
-- [ ] **Fase 1 · Movimentações** (espera o back: PRs #58 a #66 mergeados)
-- [ ] **Fase 2 · Dashboard e Caixa diário**
-- [ ] **Fase 3 · Contas fixas e parceladas**
-- [ ] **Fase 4 · Docker e PWA**, com HTTPS via Tailscale
-- [ ] **Fase 5 · Multiusuário e visão do casal**
+- [ ] **Fase 1a · Movimentações:** contrato novo, infraestrutura de formulários e lista com filtros
+- [ ] **Fase 1b · Ações nas movimentações:** lançar, editar, excluir, pagar e estornar
+- [ ] **Fase 2a · Carteira:** navegação nova, contas, extrato e transferências
+- [ ] **Fase 2b · Cartões:** cartões, compras, faturas e "Pagou com"
+- [ ] **Fase 3 · Dashboard e Caixa diário**
+- [ ] **Fase 4 · Recorrentes:** contas fixas e parceladas
+- [ ] **Fase 5 · Docker e PWA**, com HTTPS via Tailscale e testes ponta a ponta
+- [ ] **Fase 6 · Receita e calendário**
+- [ ] **Fase 7 · Ciclos**
+- [ ] **Fase 8 · Envelopes e previsão de caixa**
+- [ ] **Fase 8b · Fechamento de ciclo**
+- [ ] **Fase 9 · Multiusuário e visão do casal** (depende de login no back)
