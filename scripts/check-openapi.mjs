@@ -102,7 +102,7 @@ type Plain<T> = T extends readonly (infer U)[]
   : T extends object
     ? { [K in keyof T]-?: Plain<NonNullable<T[K]>> }
     : T
-type Bad<A, B> = { [K in keyof A & keyof B]: [Plain<A[K]>] extends [Plain<B[K]>] ? never : K }[keyof A & keyof B]
+type Bad<A, B> = { [K in keyof A & keyof B]: [Plain<NonNullable<A[K]>>] extends [Plain<NonNullable<B[K]>>] ? never : K }[keyof A & keyof B]
 type Assignable<A, B> = [Bad<A, B>] extends [never] ? true : { fields: Bad<A, B> }
 ${pairs.map((pair, i) => `export const types${i}: Assignable<${front(pair.name)}, ${back(pair)}> = true // ${pair.name}`).join('\n')}
 `
