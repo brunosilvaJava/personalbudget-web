@@ -73,27 +73,18 @@ function CardForm({ card, onDone }: { card?: CreditCardResponse; onDone: () => v
   const onSubmit = handleSubmit((values) => {
     setFormError(null)
     if (!card) {
-      create.mutate(toCardRequest(values), {
-        onSuccess: (created) => {
-          toast.success(`Cartão “${created.name}” criado.`)
-          onDone()
-        },
-        onError,
-      })
+      create.mutateAsync(toCardRequest(values)).then((created) => {
+        toast.success(`Cartão “${created.name}” criado.`)
+        onDone()
+      }, onError)
       return
     }
     const body = toCardUpdate(card, values)
     if (Object.keys(body).length === 0) return onDone()
-    update.mutate(
-      { code: card.code, body },
-      {
-        onSuccess: () => {
-          toast.success('Cartão atualizado.')
-          onDone()
-        },
-        onError,
-      },
-    )
+    update.mutateAsync({ code: card.code, body }).then(() => {
+      toast.success('Cartão atualizado.')
+      onDone()
+    }, onError)
   })
 
   return (

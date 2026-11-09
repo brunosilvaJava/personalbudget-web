@@ -130,27 +130,18 @@ function IncomeScheduleForm({
   const onSubmit = handleSubmit((values) => {
     setFormError(null)
     if (!schedule) {
-      create.mutate(toIncomeScheduleRequest(values), {
-        onSuccess: (created) => {
-          toast.success(`Receita “${created.description}” criada.`)
-          onDone(created)
-        },
-        onError,
-      })
+      create.mutateAsync(toIncomeScheduleRequest(values)).then((created) => {
+        toast.success(`Receita “${created.description}” criada.`)
+        onDone(created)
+      }, onError)
       return
     }
     const body = toIncomeScheduleUpdate(schedule, values)
     if (Object.keys(body).length === 0) return onDone(schedule)
-    update.mutate(
-      { code: schedule.code, body },
-      {
-        onSuccess: (updated) => {
-          toast.success('Receita atualizada. As datas já lançadas não mudam.')
-          onDone(updated)
-        },
-        onError,
-      },
-    )
+    update.mutateAsync({ code: schedule.code, body }).then((updated) => {
+      toast.success('Receita atualizada. As datas já lançadas não mudam.')
+      onDone(updated)
+    }, onError)
   })
 
   return (

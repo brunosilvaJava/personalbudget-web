@@ -226,19 +226,18 @@ function PayInvoiceForm({
       onSubmit={(event) => {
         event.preventDefault()
         setError(null)
-        pay.mutate(
-          {
+        pay
+          .mutateAsync({
             code: invoice.code,
             body: { payment_date: date, ...(accountCode ? { account_code: accountCode } : {}) },
-          },
-          {
-            onSuccess: (payment) => {
+          })
+          .then(
+            (payment) => {
               toast.success(`Fatura paga: ${formatMoney(payment.amount)}.`)
               onDone()
             },
-            onError: (payError) => setError(errorMessage(payError)),
-          },
-        )
+            (payError) => setError(errorMessage(payError)),
+          )
       }}
     >
       <SheetBody>
@@ -341,17 +340,14 @@ function PaymentHistory({ invoice }: { invoice: CardInvoiceResponse }) {
         onConfirm={() => {
           if (!toReverse) return
           setError(null)
-          reverse.mutate(
-            { invoiceCode: invoice.code, paymentCode: toReverse.code },
-            {
-              onSuccess: () => {
-                setToReverse(null)
-                toast.success('Pagamento da fatura estornado.')
-              },
-              onError: (reverseError) => {
-                setToReverse(null)
-                setError(errorMessage(reverseError))
-              },
+          reverse.mutateAsync({ invoiceCode: invoice.code, paymentCode: toReverse.code }).then(
+            () => {
+              setToReverse(null)
+              toast.success('Pagamento da fatura estornado.')
+            },
+            (reverseError) => {
+              setToReverse(null)
+              setError(errorMessage(reverseError))
             },
           )
         }}

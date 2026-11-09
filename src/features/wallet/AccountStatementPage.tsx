@@ -117,12 +117,9 @@ function AccountView({ account }: { account: AccountResponse }) {
             className="h-11"
             disabled={update.isPending || !online}
             onClick={() =>
-              update.mutate(
-                { code: account.code, body: { default: true } },
-                {
-                  onSuccess: () => toast.success(`“${account.name}” agora é a conta padrão.`),
-                  onError: (error) => setActionError(errorMessage(error)),
-                },
+              update.mutateAsync({ code: account.code, body: { default: true } }).then(
+                () => toast.success(`“${account.name}” agora é a conta padrão.`),
+                (error) => setActionError(errorMessage(error)),
               )
             }
           >
@@ -138,12 +135,9 @@ function AccountView({ account }: { account: AccountResponse }) {
             onClick={() =>
               active
                 ? setConfirmInactivate(true)
-                : setActive.mutate(
-                    { code: account.code, active: true },
-                    {
-                      onSuccess: () => toast.success('Conta ativada.'),
-                      onError: (error) => setActionError(errorMessage(error)),
-                    },
+                : setActive.mutateAsync({ code: account.code, active: true }).then(
+                    () => toast.success('Conta ativada.'),
+                    (error) => setActionError(errorMessage(error)),
                   )
             }
           >
@@ -169,17 +163,14 @@ function AccountView({ account }: { account: AccountResponse }) {
         confirmLabel="Inativar"
         pending={setActive.isPending}
         onConfirm={() =>
-          setActive.mutate(
-            { code: account.code, active: false },
-            {
-              onSuccess: () => {
-                setConfirmInactivate(false)
-                toast.success('Conta inativada.')
-              },
-              onError: (error) => {
-                setConfirmInactivate(false)
-                setActionError(errorMessage(error))
-              },
+          setActive.mutateAsync({ code: account.code, active: false }).then(
+            () => {
+              setConfirmInactivate(false)
+              toast.success('Conta inativada.')
+            },
+            (error) => {
+              setConfirmInactivate(false)
+              setActionError(errorMessage(error))
             },
           )
         }

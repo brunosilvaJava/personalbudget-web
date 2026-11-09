@@ -245,17 +245,17 @@ function PurchaseView({
         destructive
         pending={remove.isPending}
         onConfirm={() =>
-          remove.mutate(purchase.code, {
-            onSuccess: () => {
+          remove.mutateAsync(purchase.code).then(
+            () => {
               setConfirmDelete(false)
               toast.success('Compra excluída.')
               onDeleted()
             },
-            onError: (deleteError) => {
+            (deleteError) => {
               setConfirmDelete(false)
               setError(errorMessage(deleteError))
             },
-          })
+          )
         }
       />
     </>
@@ -296,27 +296,18 @@ function PurchaseForm({
   const onSubmit = handleSubmit((values) => {
     setFormError(null)
     if (!purchase) {
-      create.mutate(toPurchaseRequest(values), {
-        onSuccess: (saved) => {
-          toast.success(`Compra de ${formatMoney(saved.total_amount)} lançada no cartão.`)
-          onSaved(saved)
-        },
-        onError,
-      })
+      create.mutateAsync(toPurchaseRequest(values)).then((saved) => {
+        toast.success(`Compra de ${formatMoney(saved.total_amount)} lançada no cartão.`)
+        onSaved(saved)
+      }, onError)
       return
     }
     const body = toPurchaseUpdate(purchase, values)
     if (Object.keys(body).length === 0) return onSaved(purchase)
-    update.mutate(
-      { code: purchase.code, body },
-      {
-        onSuccess: (saved) => {
-          toast.success('Compra atualizada.')
-          onSaved(saved)
-        },
-        onError,
-      },
-    )
+    update.mutateAsync({ code: purchase.code, body }).then((saved) => {
+      toast.success('Compra atualizada.')
+      onSaved(saved)
+    }, onError)
   })
 
   return (

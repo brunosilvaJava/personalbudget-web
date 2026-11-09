@@ -83,12 +83,9 @@ function CardView({ card }: { card: CreditCardResponse }) {
           className="h-11"
           disabled={setActive.isPending || !online}
           onClick={() =>
-            setActive.mutate(
-              { code: card.code, active: !active },
-              {
-                onSuccess: () => toast.success(active ? 'Cartão inativado.' : 'Cartão ativado.'),
-                onError: (mutationError) => setError(errorMessage(mutationError)),
-              },
+            setActive.mutateAsync({ code: card.code, active: !active }).then(
+              () => toast.success(active ? 'Cartão inativado.' : 'Cartão ativado.'),
+              (mutationError) => setError(errorMessage(mutationError)),
             )
           }
         >

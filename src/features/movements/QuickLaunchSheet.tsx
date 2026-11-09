@@ -133,8 +133,8 @@ function QuickLaunchForm({
       values,
       credit && chosen?.kind === 'card' ? null : chosen,
     )
-    launch.mutate(requests, {
-      onSuccess: (result) => {
+    launch.mutateAsync(requests).then(
+      (result) => {
         if (chosen) rememberPaidWith(encodePaidWith(chosen))
         if (result.kind === 'card') {
           const installment = result.purchase.installment_list[0]
@@ -166,8 +166,8 @@ function QuickLaunchForm({
         )
         onDone()
       },
-      onError: (error) => setFormError(applyApiErrors(error, setError, QUICK_LAUNCH_FIELDS)),
-    })
+      (error) => setFormError(applyApiErrors(error, setError, QUICK_LAUNCH_FIELDS)),
+    )
   })
 
   return (
@@ -376,23 +376,19 @@ function PaymentFailed({
           className="h-12 text-base"
           disabled={pay.isPending || !online}
           onClick={() =>
-            pay.mutate(
-              {
+            pay
+              .mutateAsync({
                 code: movement.code,
                 body: {
                   amount: remainingAmount(movement),
                   effective_date: effectiveDate,
                   ...(accountCode ? { account_code: accountCode } : {}),
                 },
-              },
-              {
-                onSuccess: () => {
-                  toast.success(credit ? 'Recebimento registrado.' : 'Pagamento registrado.')
-                  onDone()
-                },
-                onError: onRetryFailed,
-              },
-            )
+              })
+              .then(() => {
+                toast.success(credit ? 'Recebimento registrado.' : 'Pagamento registrado.')
+                onDone()
+              }, onRetryFailed)
           }
         >
           {pay.isPending && <LoaderCircle className="animate-spin" aria-hidden />}
