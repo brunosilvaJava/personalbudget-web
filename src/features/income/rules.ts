@@ -5,7 +5,6 @@ import type {
   IncomeOccurrenceState,
   IncomeScheduleResponse,
   NonBusinessDayPolicy,
-  PayCyclePendingResponse,
 } from '@/api/contracts'
 import { formatDate, formatShortMonth } from '@/lib/format'
 
@@ -88,25 +87,5 @@ export function describeOccurrenceDate(occurrence: IncomeOccurrenceResponse): st
         : 'data não calculada: calendário não revisado'
     case 'BUSINESS_DAY_NOT_FOUND':
       return 'o mês não tem esse dia útil'
-  }
-}
-
-/** One line for a pendency of the pay cycles (shown in the preview of a calendar review). */
-export function describePayCyclePending(pending: PayCyclePendingResponse): string {
-  switch (pending.type) {
-    case 'BOUNDARY_DIVERGES_FROM_ANCHOR':
-      return pending.boundary_date && pending.anchor_date
-        ? `A virada de ${formatDate(pending.boundary_date)} fica diferente da receita âncora, que cai em ${formatDate(pending.anchor_date)}.`
-        : 'Uma virada de ciclo fica diferente da receita âncora.'
-    case 'CALENDAR_NOT_REVIEWED':
-      return pending.year
-        ? `O calendário de ${pending.year} não está revisado.`
-        : 'Há um calendário não revisado.'
-    case 'BUSINESS_DAY_NOT_FOUND':
-      return 'Um mês não tem o dia útil da receita âncora.'
-    case 'ANCHOR_SCHEDULE_ENDS':
-      return 'A receita âncora termina antes do fim dos ciclos.'
-    case 'NO_CURRENT_CYCLE':
-      return 'Nenhum ciclo contém a data de hoje.'
   }
 }

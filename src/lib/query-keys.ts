@@ -72,6 +72,10 @@ export const queryKeys = {
   currentPayCycle: ['pay-cycles', 'current'] as const,
   payCycleByDate: (date: ISODate) => ['pay-cycles', 'date', date] as const,
   payCycle: (code: UUID) => ['pay-cycles', 'code', code] as const,
+  payCycles: (includeCancelled: boolean) => ['pay-cycles', 'list', includeCancelled] as const,
+  payCycleConfig: ['pay-cycle-config'] as const,
+  payCycleSummary: (code: UUID) => ['pay-cycle-summary', code] as const,
+  payCycleAdjustments: (code: UUID) => ['pay-cycle-adjustments', code] as const,
 }
 
 /**
@@ -119,7 +123,14 @@ export function invalidateFinancial(queryClient: QueryClient): Promise<void> {
  * Root keys that an income schedule or a holiday calendar write can change, besides the financial
  * group: the schedules, the calendar and the pay cycles (a reviewed year refreshes the boundaries).
  */
-const INCOME_ROOT_KEYS = ['income-schedules', 'income-schedule', 'holidays', 'pay-cycles'] as const
+const INCOME_ROOT_KEYS = [
+  'income-schedules',
+  'income-schedule',
+  'holidays',
+  'pay-cycles',
+  'pay-cycle-config',
+  'pay-cycle-adjustments',
+] as const
 
 /** Called in the onSuccess of every write to an income schedule or to the holiday calendar. */
 export function invalidateIncome(queryClient: QueryClient): Promise<void> {
@@ -128,3 +139,10 @@ export function invalidateIncome(queryClient: QueryClient): Promise<void> {
     ...INCOME_ROOT_KEYS.map((key) => queryClient.invalidateQueries({ queryKey: [key] })),
   ]).then(() => undefined)
 }
+
+/**
+ * Called in the onSuccess of every write to the cycles (activate, deactivate, adjust a boundary,
+ * change the anchor). The boundaries decide the default period of the lists and every cycle report,
+ * and a changed anchor changes the schedules: it is the income group and the financial group.
+ */
+export const invalidatePayCycles = invalidateIncome

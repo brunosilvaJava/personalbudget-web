@@ -14,6 +14,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useCategoryLookup } from '@/features/categories/queries'
+import { AnchorLockedNote } from '@/features/pay-cycles/AnchorLockedNote'
 import { errorMessage } from '@/lib/api-errors'
 import { currentMonth, shiftMonth } from '@/lib/dates'
 import { formatMonth } from '@/lib/format'
@@ -121,6 +122,7 @@ function ScheduleView({ schedule }: { schedule: IncomeScheduleResponse }) {
           {active ? 'Inativar' : 'Ativar'}
         </Button>
       </div>
+      <AnchorLockedNote schedule={schedule} />
       {actionError && <FormAlert message={actionError} />}
 
       <Occurrences schedule={schedule} />

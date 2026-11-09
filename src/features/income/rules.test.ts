@@ -1,12 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { occurrence } from '@/test/fixtures'
-import {
-  describeOccurrenceDate,
-  describePayCyclePending,
-  describeRule,
-  describeValidity,
-} from './rules'
+import { describeOccurrenceDate, describeRule, describeValidity } from './rules'
 
 describe('describeRule', () => {
   it('should say the day of the month and what happens on a day that is not a business day', () => {
@@ -63,33 +58,5 @@ describe('describeOccurrenceDate', () => {
     expect(
       describeOccurrenceDate(occurrence({ state: 'BUSINESS_DAY_NOT_FOUND', planned_date: null })),
     ).toBe('o mês não tem esse dia útil')
-  })
-})
-
-describe('describePayCyclePending', () => {
-  it('should name both dates of a boundary that diverges from the anchor', () => {
-    expect(
-      describePayCyclePending({
-        type: 'BOUNDARY_DIVERGES_FROM_ANCHOR',
-        nominal_month: '2026-12',
-        year: null,
-        cycle_code: null,
-        boundary_date: '2026-12-04',
-        anchor_date: '2026-12-03',
-      }),
-    ).toBe('A virada de 04/12/2026 fica diferente da receita âncora, que cai em 03/12/2026.')
-  })
-
-  it('should name the year of a calendar that is not reviewed', () => {
-    expect(
-      describePayCyclePending({
-        type: 'CALENDAR_NOT_REVIEWED',
-        nominal_month: null,
-        year: 2027,
-        cycle_code: null,
-        boundary_date: null,
-        anchor_date: null,
-      }),
-    ).toBe('O calendário de 2027 não está revisado.')
   })
 })

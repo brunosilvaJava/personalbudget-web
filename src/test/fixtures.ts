@@ -11,7 +11,11 @@ import type {
   IncomeScheduleResponse,
   InstallmentBillResponse,
   Page,
+  PayCycleAdjustmentResponse,
+  PayCycleConfigResponse,
+  PayCyclePendingResponse,
   PayCycleResponse,
+  PayCycleSummaryResponse,
 } from '@/api/contracts'
 
 /**
@@ -122,6 +126,84 @@ export function payCycle(overrides: Partial<PayCycleResponse> = {}): PayCycleRes
     end_adjusted: false,
     version: 1,
     pending: [],
+    ...overrides,
+  }
+}
+
+/** The cycles off, as a fresh database has them. */
+export function payCycleConfig(
+  overrides: Partial<PayCycleConfigResponse> = {},
+): PayCycleConfigResponse {
+  return {
+    mode: 'CALENDAR_MONTH',
+    anchor_schedule_code: null,
+    activation_date: null,
+    version: 0,
+    pending: [],
+    ...overrides,
+  }
+}
+
+export function payCyclePending(
+  overrides: Partial<PayCyclePendingResponse> = {},
+): PayCyclePendingResponse {
+  return {
+    type: 'CALENDAR_NOT_REVIEWED',
+    nominal_month: null,
+    year: 2027,
+    cycle_code: null,
+    boundary_date: null,
+    anchor_date: null,
+    ...overrides,
+  }
+}
+
+export function payCycleSummary(
+  overrides: Partial<PayCycleSummaryResponse> = {},
+): PayCycleSummaryResponse {
+  return {
+    cycle: payCycle(),
+    recognized_revenue: 5000,
+    recognized_expense: 1800,
+    projected_revenue: 5000,
+    projected_expense: 3200,
+    projection_incomplete: false,
+    categories: [
+      {
+        category_code: null,
+        category_name: 'Salário',
+        operation_type: 'CREDIT',
+        recognized_amount: 5000,
+        projected_amount: 5000,
+      },
+      {
+        category_code: null,
+        category_name: 'Mercado',
+        operation_type: 'DEBIT',
+        recognized_amount: 800,
+        projected_amount: 1500,
+      },
+    ],
+    pending: [],
+    ...overrides,
+  }
+}
+
+export function payCycleAdjustment(
+  overrides: Partial<PayCycleAdjustmentResponse> = {},
+): PayCycleAdjustmentResponse {
+  return {
+    code: code('adjust'),
+    type: 'MANUAL_BOUNDARY',
+    previous_cycle_code: null,
+    next_cycle_code: null,
+    old_boundary: '2026-12-04',
+    new_boundary: '2026-12-03',
+    justification: 'Salário caiu um dia antes',
+    expected_previous_version: 1,
+    expected_next_version: 1,
+    expected_config_version: null,
+    created_date: '2026-11-09T10:00:00',
     ...overrides,
   }
 }

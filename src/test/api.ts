@@ -5,20 +5,22 @@ import type {
   CategoryGroupResponse,
   CategoryResponse,
   CreditCardResponse,
+  PayCycleConfigResponse,
   PayCycleResponse,
 } from '@/api/contracts'
-import { accounts, allCategories, groups } from './fixtures'
+import { accounts, allCategories, groups, payCycleConfig } from './fixtures'
 import { server } from './server'
 
 /**
  * Handlers most screens need: health, categories, accounts (only the default one), cards (none) and
- * the current cycle (none). Tests that need more override them with server.use.
+ * the current cycle (none) and the cycle configuration (off). Tests that need more override them with server.use.
  */
 export function mockCommonApi(
   options: {
     categories?: CategoryResponse[]
     groups?: CategoryGroupResponse[]
     currentCycle?: PayCycleResponse | null
+    payCycleConfig?: PayCycleConfigResponse
     accounts?: AccountResponse[]
     cards?: CreditCardResponse[]
   } = {},
@@ -43,6 +45,9 @@ export function mockCommonApi(
         list.filter((card) => (statuses.length ? statuses : ['ACTIVE']).includes(card.status)),
       )
     }),
+    http.get('/api/pay_cycle_config', () =>
+      HttpResponse.json(options.payCycleConfig ?? payCycleConfig()),
+    ),
     http.get('/api/pay_cycle/current', () =>
       options.currentCycle
         ? HttpResponse.json(options.currentCycle)

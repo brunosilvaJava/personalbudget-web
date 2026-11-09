@@ -9,6 +9,8 @@ import { IncomeSchedulePage } from '@/features/income/IncomeSchedulePage'
 import { IncomeSchedulesPage } from '@/features/income/IncomeSchedulesPage'
 import { InstallmentBillsPage } from '@/features/installment-bills/InstallmentBillsPage'
 import { MorePage } from '@/features/more/MorePage'
+import { CyclePage } from '@/features/pay-cycles/CyclePage'
+import { CyclesPage } from '@/features/pay-cycles/CyclesPage'
 import { MovementsPage } from '@/features/movements/MovementsPage'
 import { RecurringLayout } from '@/features/recurring/RecurringLayout'
 import { NotFoundPage } from '@/features/system/NotFoundPage'
@@ -62,6 +64,8 @@ export const routes: RouteObject[] = [
         ],
       },
       { path: 'receita/agenda/:code', element: <IncomeSchedulePage /> },
+      { path: 'ciclos', element: <CyclesPage /> },
+      { path: 'ciclos/:code', element: <CyclePage /> },
       { path: 'contas/*', element: <LegacyRecurringRedirect /> },
       { path: 'mais', element: <MorePage /> },
       { path: '*', element: <NotFoundPage /> },
