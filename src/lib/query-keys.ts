@@ -3,6 +3,7 @@ import type { QueryClient } from '@tanstack/react-query'
 import type {
   AccountStatus,
   CategoryStatus,
+  CreditCardStatus,
   FinancialMovementQuery,
   FixedBillQuery,
   ISODate,
@@ -49,6 +50,14 @@ export const queryKeys = {
     ['account-statement', code, start, end] as const,
   transfers: (start: ISODate, end: ISODate, accountCode: UUID | null) =>
     ['transfers', start, end, accountCode] as const,
+
+  creditCards: (statuses: readonly CreditCardStatus[]) => ['credit-cards', statuses] as const,
+  creditCard: (code: UUID) => ['credit-cards', 'code', code] as const,
+  cardLimit: (code: UUID) => ['card-limit', code] as const,
+  cardInvoices: (cardCode: UUID) => ['card-invoices', cardCode] as const,
+  cardInvoice: (code: UUID) => ['card-invoice', code] as const,
+  invoicePayments: (invoiceCode: UUID) => ['invoice-payments', invoiceCode] as const,
+  cardPurchase: (code: UUID) => ['card-purchase', code] as const,
 
   currentPayCycle: ['pay-cycles', 'current'] as const,
   payCycleByDate: (date: ISODate) => ['pay-cycles', 'date', date] as const,

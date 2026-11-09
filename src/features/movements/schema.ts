@@ -1,6 +1,7 @@
 import { z } from 'zod'
 
 import type {
+  CardPurchaseRequest,
   FinancialMovementRequest,
   FinancialMovementResponse,
   FinancialMovementUpdateRequest,
@@ -10,6 +11,7 @@ import type {
 } from '@/api/contracts'
 import { dateOf, nowApiDateTime, todayIso } from '@/lib/dates'
 import { fromCents, toCents } from '@/lib/money'
+import type { PaidWith } from './paidWith'
 
 /** The back's rules (FinancialMovementRequest): 4..50 chars, > 0, 8 integer digits. */
 export const DESCRIPTION_MIN = 4
@@ -45,6 +47,8 @@ export const quickLaunchSchema = z
     unpaid: z.boolean(),
     /** used when unpaid */
     due_date: z.string(),
+    /** "account:<code>" or "card:<code>" ("Pagou com"); empty = the default account */
+    paid_with: z.string(),
   })
   .refine((value) => !value.unpaid || /^\d{4}-\d{2}-\d{2}$/.test(value.due_date), {
     path: ['due_date'],
@@ -73,6 +77,7 @@ export function quickLaunchDefaults(operationType: OperationType = 'DEBIT'): Qui
     movement_date: today,
     unpaid: false,
     due_date: today,
+    paid_with: '',
   }
 }
 
@@ -81,14 +86,35 @@ function movementDateTime(date: ISODate): string {
   return date === todayIso() ? nowApiDateTime() : `${date}T12:00:00`
 }
 
+export type QuickLaunchRequests =
+  | {
+      kind: 'movement'
+      movement: FinancialMovementRequest
+      settlement: MovementSettlementRequest | null
+    }
+  | { kind: 'card'; purchase: CardPurchaseRequest }
+
 /**
- * The quick launch is TWO calls when already paid: the movement, then the settlement of the whole
- * amount on the same day (the default account until Phase 2b adds "Pagou com").
+ * Paid with an account: TWO calls when already paid, the movement and then the settlement of the
+ * whole amount on that account (the default one when none was chosen). Paid with a card: ONE card
+ * purchase in a single installment; nothing is settled, the invoice payment moves the cash.
  */
-export function toQuickLaunchRequests(values: QuickLaunchValues): {
-  movement: FinancialMovementRequest
-  settlement: MovementSettlementRequest | null
-} {
+export function toQuickLaunchRequests(
+  values: QuickLaunchValues,
+  paidWith: PaidWith | null,
+): QuickLaunchRequests {
+  if (paidWith?.kind === 'card' && values.operation_type === 'DEBIT') {
+    const purchase: CardPurchaseRequest = {
+      card_code: paidWith.code,
+      description: values.description,
+      purchase_date: values.movement_date,
+      installments: 1,
+      installment_amount: fromCents(values.amount),
+    }
+    if (values.category_code) purchase.category_code = values.category_code
+    return { kind: 'card', purchase }
+  }
+
   const movementDate = movementDateTime(values.movement_date)
   const movement: FinancialMovementRequest = {
     operation_type: values.operation_type,
@@ -98,10 +124,12 @@ export function toQuickLaunchRequests(values: QuickLaunchValues): {
     due_date: values.unpaid ? `${values.due_date}T00:00:00` : movementDate,
   }
   if (values.category_code) movement.category_code = values.category_code
-  const settlement = values.unpaid
-    ? null
-    : { amount: fromCents(values.amount), effective_date: values.movement_date }
-  return { movement, settlement }
+  let settlement: MovementSettlementRequest | null = null
+  if (!values.unpaid) {
+    settlement = { amount: fromCents(values.amount), effective_date: values.movement_date }
+    if (paidWith?.kind === 'account') settlement.account_code = paidWith.code
+  }
+  return { kind: 'movement', movement, settlement }
 }
 
 // ───────────────────────── Edit ─────────────────────────

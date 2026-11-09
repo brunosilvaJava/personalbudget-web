@@ -10,7 +10,9 @@ import { RecurringLayout } from '@/features/recurring/RecurringLayout'
 import { NotFoundPage } from '@/features/system/NotFoundPage'
 import { AccountsPage } from '@/features/wallet/AccountsPage'
 import { AccountStatementPage } from '@/features/wallet/AccountStatementPage'
+import { CardPage } from '@/features/wallet/CardPage'
 import { CardsPage } from '@/features/wallet/CardsPage'
+import { InvoicePage } from '@/features/wallet/InvoicePage'
 import { TransfersPage } from '@/features/wallet/TransfersPage'
 import { WalletLayout } from '@/features/wallet/WalletLayout'
 import { AppLayout } from './AppLayout'
@@ -35,6 +37,8 @@ export const routes: RouteObject[] = [
         ],
       },
       { path: 'carteira/contas/:code', element: <AccountStatementPage /> },
+      { path: 'carteira/cartoes/:code', element: <CardPage /> },
+      { path: 'carteira/faturas/:code', element: <InvoicePage /> },
       {
         path: 'recorrentes',
         element: <RecurringLayout />,

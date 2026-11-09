@@ -1,5 +1,15 @@
-import { ArrowLeft, CreditCard, LoaderCircle, Pencil, Repeat, Trash2, Undo2 } from 'lucide-react'
+import {
+  ArrowLeft,
+  CreditCard,
+  LoaderCircle,
+  Pencil,
+  ReceiptText,
+  Repeat,
+  Trash2,
+  Undo2,
+} from 'lucide-react'
 import { useState, type ReactNode } from 'react'
+import { Link } from 'react-router'
 import { toast } from 'sonner'
 
 import type { FinancialMovementResponse, MovementSettlementResponse } from '@/api/contracts'
@@ -24,6 +34,9 @@ import {
 } from '@/components/ui/sheet'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useCategoryLookup } from '@/features/categories/queries'
+import { AccountSelect } from '@/features/wallet/AccountSelect'
+import { PurchaseSheet } from '@/features/wallet/PurchaseSheet'
+import { useActiveAccounts } from '@/features/wallet/queries'
 import { errorMessage } from '@/lib/api-errors'
 import { dateOf, todayIso } from '@/lib/dates'
 import { formatDate, formatMoney, formatTime } from '@/lib/format'
@@ -177,6 +190,7 @@ function Details({
   const remove = useDeleteMovement()
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
+  const [showPurchase, setShowPurchase] = useState(false)
 
   const card = isCardInstallment(movement)
   const credit = movement.operation_type === 'CREDIT'
@@ -239,10 +253,29 @@ function Details({
         </div>
 
         {card ? (
-          <p className="rounded-lg bg-muted p-3 text-sm text-muted-foreground">
-            Parcela de cartão: ela é paga junto com a fatura e alterada pela compra. As telas de
-            cartão chegam na Fase 2.
-          </p>
+          <div className="flex flex-col gap-3 rounded-lg bg-muted p-3 text-sm">
+            <p className="text-muted-foreground">
+              Parcela de cartão: ela é paga junto com a fatura e alterada pela compra.
+            </p>
+            <div className="flex gap-2">
+              {movement.card_invoice_code && (
+                <Button asChild className="h-11 flex-1">
+                  <Link to={`/carteira/faturas/${movement.card_invoice_code}`}>
+                    <ReceiptText aria-hidden />
+                    Ver fatura
+                  </Link>
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                className="h-11 flex-1"
+                onClick={() => setShowPurchase(true)}
+              >
+                <CreditCard aria-hidden />
+                Ver compra
+              </Button>
+            </div>
+          </div>
         ) : (
           <SettlementList movement={movement} />
         )}
@@ -272,6 +305,13 @@ function Details({
             </Button>
           </div>
         </SheetFooter>
+      )}
+      {card && (
+        <PurchaseSheet
+          open={showPurchase}
+          onOpenChange={setShowPurchase}
+          purchaseCode={movement.card_purchase_code}
+        />
       )}
       <ConfirmDialog
         open={confirmDelete}
@@ -425,6 +465,10 @@ function PayForm({
 }) {
   const online = useOnline()
   const pay = useCreateSettlement()
+  const accounts = useActiveAccounts()
+  const defaultAccount = accounts.data?.find((account) => account.default)?.code ?? null
+  const [chosenAccount, setChosenAccount] = useState<string | null>(null)
+  const accountCode = chosenAccount ?? defaultAccount
   const [date, setDate] = useState(todayIso())
   const [error, setError] = useState<string | null>(null)
   const credit = movement.operation_type === 'CREDIT'
@@ -438,7 +482,14 @@ function PayForm({
         if (!date) return
         setError(null)
         pay.mutate(
-          { code: movement.code, body: { amount: remaining, effective_date: date } },
+          {
+            code: movement.code,
+            body: {
+              amount: remaining,
+              effective_date: date,
+              ...(accountCode ? { account_code: accountCode } : {}),
+            },
+          },
           {
             onSuccess: () => {
               toast.success(credit ? 'Recebimento registrado.' : 'Pagamento registrado.')
@@ -456,6 +507,11 @@ function PayForm({
           </p>
           <p className="text-2xl font-semibold tabular-nums">{formatMoney(remaining)}</p>
         </div>
+        {(accounts.data?.length ?? 0) > 1 && (
+          <Field id="pay-account" label={credit ? 'Recebido na conta' : 'Pago com a conta'}>
+            {(aria) => <AccountSelect {...aria} value={accountCode} onChange={setChosenAccount} />}
+          </Field>
+        )}
         <Field id="pay-date" label={credit ? 'Recebido em' : 'Pago em'}>
           {(aria) => (
             <Input

@@ -14,6 +14,8 @@
  * card links on movements (E9d), budget envelopes (E10) and the cash forecast (E11). Settlements gained
  * account_code; FinancialMovementResponse gained card_purchase_code, card_invoice_code, installment_number.
  *
+ * ADDED on 2026-11-09 (front Phase 2a): GET /account/{code}/statement (back PR #99), additive.
+ *
  * BREAKING CHANGES since the 2026-11-03 version of this file:
  *  - POST/PATCH /financial_movement no longer accept amount_paid, pay_date or status (400). Payments
  *    are settlements (see /financial_movement/{code}/settlements). The status is derived by the server.

@@ -1,7 +1,7 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import type {
-  FinancialMovementRequest,
+  CardPurchaseResponse,
   FinancialMovementResponse,
   FinancialMovementUpdateRequest,
   MovementSettlementRequest,
@@ -17,7 +17,9 @@ import {
   reverseSettlement,
   updateMovement,
 } from '@/api/financialMovements'
+import { createPurchase } from '@/api/creditCards'
 import { invalidateFinancial, queryKeys, type MovementListFilters } from '@/lib/query-keys'
+import type { QuickLaunchRequests } from './schema'
 
 /** The list loads 20 at a time while scrolling. */
 export const MOVEMENTS_PAGE_SIZE = 20
@@ -54,31 +56,34 @@ export function useSettlements(movementCode: UUID | undefined) {
   })
 }
 
-export interface QuickLaunchResult {
-  movement: FinancialMovementResponse
-  /** set when the movement was created but the settlement failed: it stayed unpaid */
-  settlementError: unknown
-}
+export type QuickLaunchResult =
+  | {
+      kind: 'movement'
+      movement: FinancialMovementResponse
+      /** set when the movement was created but the settlement failed: it stayed unpaid */
+      settlementError: unknown
+    }
+  | { kind: 'card'; purchase: CardPurchaseResponse }
 
 /**
- * Creates the movement and, when already paid, the settlement. A failed settlement does not undo
- * the movement (there is no shortcut on the back): the result says so and the sheet offers to try
- * paying again.
+ * Creates the movement and, when already paid, the settlement; or the card purchase. A failed
+ * settlement does not undo the movement (there is no shortcut on the back): the result says so
+ * and the sheet offers to try paying again.
  */
 export function useQuickLaunch() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async (requests: {
-      movement: FinancialMovementRequest
-      settlement: MovementSettlementRequest | null
-    }): Promise<QuickLaunchResult> => {
+    mutationFn: async (requests: QuickLaunchRequests): Promise<QuickLaunchResult> => {
+      if (requests.kind === 'card') {
+        return { kind: 'card', purchase: await createPurchase(requests.purchase) }
+      }
       const movement = await createMovement(requests.movement)
-      if (!requests.settlement) return { movement, settlementError: null }
+      if (!requests.settlement) return { kind: 'movement', movement, settlementError: null }
       try {
         await createSettlement(movement.code, requests.settlement)
-        return { movement, settlementError: null }
+        return { kind: 'movement', movement, settlementError: null }
       } catch (settlementError) {
-        return { movement, settlementError }
+        return { kind: 'movement', movement, settlementError }
       }
     },
     onSuccess: () => invalidateFinancial(queryClient),
