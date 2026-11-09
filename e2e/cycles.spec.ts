@@ -47,6 +47,15 @@ async function cleanUp(request: APIRequestContext) {
   }
 }
 
+let failedCalls: string[] = []
+test.afterEach(() => {
+  const info = test.info()
+  if (info.status !== info.expectedStatus) {
+    console.log(`API calls of the page:\n${failedCalls.join('\n')}`)
+  }
+  failedCalls = []
+})
+
 test('activates the cycles on an anchor schedule, adjusts a boundary and turns them off', async ({
   page,
   request,
@@ -57,8 +66,7 @@ test('activates the cycles on an anchor schedule, adjusts a boundary and turns t
   // viewport runs this same spec) can start where it ends, within the 31 days the back accepts.
   const anchorDay = Number(shiftDate(today, 10).slice(8))
 
-  // What the page asked the back and how long each answer took: a write waits for the refetch of
-  // every active query before its toast, so a slow answer shows up here.
+  // What the page asked the back, in order: printed only when the test fails.
   const calls: string[] = []
   const startedAt = Date.now()
   page.on('response', (response) => {
@@ -188,7 +196,7 @@ test('activates the cycles on an anchor schedule, adjusts a boundary and turns t
       mode: 'CALENDAR_MONTH',
     })
   } finally {
-    console.log(`API calls of the page:\n${calls.join('\n')}`)
+    failedCalls = calls
     await cleanUp(request)
   }
 })

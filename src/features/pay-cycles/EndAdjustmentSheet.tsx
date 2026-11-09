@@ -2,7 +2,6 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { LoaderCircle } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
-import { toast } from 'sonner'
 
 import type {
   PayCycleEndAdjustmentPreviewResponse,
@@ -123,8 +122,11 @@ function EndAdjustmentForm({
           setStep('choose')
         }}
         onConfirm={(justification) =>
-          adjust.mutate(
-            {
+          // mutateAsync, not mutate: with the boundary moved, the page may lose the next cycle for a
+          // moment and take this sheet off the screen before the answer is handled. The error shows
+          // from `adjust.error`.
+          void adjust
+            .mutateAsync({
               code: cycle.code,
               body: {
                 new_end_date: newEnd,
@@ -132,14 +134,8 @@ function EndAdjustmentForm({
                 expected_version: result.expected_version,
                 expected_next_version: result.expected_next_version,
               },
-            },
-            {
-              onSuccess: () => {
-                toast.success('Virada ajustada.')
-                onDone()
-              },
-            },
-          )
+            })
+            .then(onDone, () => undefined)
         }
       >
         <EndAdjustmentReview preview={result} />

@@ -1,5 +1,3 @@
-import { toast } from 'sonner'
-
 import type { PayCycleConfigResponse } from '@/api/contracts'
 import {
   Sheet,
@@ -35,14 +33,11 @@ export function DeactivationSheet({ open, onOpenChange, config }: DeactivationSh
             pending={deactivate.isPending}
             error={deactivate.error}
             onConfirm={(justification) =>
-              deactivate.mutate(
-                { expected_version: config.version, justification },
-                {
-                  onSuccess: () => {
-                    toast.success('Ciclos desligados.')
-                    onOpenChange(false)
-                  },
-                },
+              // mutateAsync, not mutate: turning the cycles off takes this sheet off the screen
+              // before the answer is handled. The error shows from `deactivate.error`.
+              void deactivate.mutateAsync({ expected_version: config.version, justification }).then(
+                () => onOpenChange(false),
+                () => undefined,
               )
             }
           >

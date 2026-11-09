@@ -3,7 +3,6 @@ import { LoaderCircle } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { Link } from 'react-router'
-import { toast } from 'sonner'
 
 import type { PayCycleActivationPreviewResponse, PayCycleConfigResponse } from '@/api/contracts'
 import { FormAlert } from '@/components/domain/FormAlert'
@@ -104,16 +103,11 @@ function ActivationForm({
   const onActivate = () => {
     if (!result) return
     setFormError(null)
-    activate.mutate(
-      { initial_date: initialDate, expected_version: result.expected_version },
-      {
-        onSuccess: () => {
-          toast.success(`Ciclos ativados a partir de ${formatDate(initialDate)}.`)
-          onDone()
-        },
-        onError: (error) => setFormError(errorMessage(error)),
-      },
-    )
+    // mutateAsync, not mutate: the refreshed data can take this sheet off the screen before the
+    // answer is handled, and the sheet still has to be closed.
+    void activate
+      .mutateAsync({ initial_date: initialDate, expected_version: result.expected_version })
+      .then(onDone, (error: unknown) => setFormError(errorMessage(error)))
   }
 
   if (step === 'preview' && result) {

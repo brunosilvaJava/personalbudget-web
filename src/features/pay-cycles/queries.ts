@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
 
 import {
   activatePayCycles,
@@ -23,6 +24,7 @@ import type {
   PayCycleEndAdjustmentRequest,
   UUID,
 } from '@/api/contracts'
+import { formatDate } from '@/lib/format'
 import { invalidatePayCycles, queryKeys } from '@/lib/query-keys'
 
 /** The mode (calendar month or pay cycles), the anchor, its version and the pendencies. */
@@ -70,19 +72,43 @@ export const usePreviewAnchorTransition = () =>
     mutationFn: (body: PayCycleAnchorTransitionPreviewRequest) => previewAnchorTransition(body),
   })
 
-/** Every write to the cycles moves boundaries, periods and reports: the whole group is refreshed. */
-function usePayCycleMutation<TVariables, TData>(fn: (variables: TVariables) => Promise<TData>) {
+/**
+ * Every write to the cycles moves boundaries, periods and reports: the whole group is refreshed.
+ * The toast is here, not in the sheet that asked: the refreshed data can take that sheet off the
+ * screen (a boundary that moved, the cycles that went off) before the answer is handled, and a
+ * callback given to `mutate` does not run once its component is gone.
+ */
+function usePayCycleMutation<TVariables, TData>(
+  fn: (variables: TVariables) => Promise<TData>,
+  message: (variables: TVariables) => string,
+) {
   const queryClient = useQueryClient()
-  return useMutation({ mutationFn: fn, onSuccess: () => invalidatePayCycles(queryClient) })
+  return useMutation({
+    mutationFn: fn,
+    onSuccess: async (_data, variables) => {
+      toast.success(message(variables))
+      await invalidatePayCycles(queryClient)
+    },
+  })
 }
 
 export const useActivatePayCycles = () =>
-  usePayCycleMutation((body: PayCycleActivationRequest) => activatePayCycles(body))
+  usePayCycleMutation(
+    (body: PayCycleActivationRequest) => activatePayCycles(body),
+    (body) => `Ciclos ativados a partir de ${formatDate(body.initial_date)}.`,
+  )
 export const useDeactivatePayCycles = () =>
-  usePayCycleMutation((body: PayCycleDeactivationRequest) => deactivatePayCycles(body))
+  usePayCycleMutation(
+    (body: PayCycleDeactivationRequest) => deactivatePayCycles(body),
+    () => 'Ciclos desligados.',
+  )
 export const useAdjustCycleEnd = () =>
-  usePayCycleMutation(({ code, body }: { code: UUID; body: PayCycleEndAdjustmentRequest }) =>
-    adjustEnd(code, body),
+  usePayCycleMutation(
+    ({ code, body }: { code: UUID; body: PayCycleEndAdjustmentRequest }) => adjustEnd(code, body),
+    () => 'Virada ajustada.',
   )
 export const useTransitionAnchor = () =>
-  usePayCycleMutation((body: PayCycleAnchorTransitionRequest) => transitionAnchor(body))
+  usePayCycleMutation(
+    (body: PayCycleAnchorTransitionRequest) => transitionAnchor(body),
+    () => 'Receita âncora atualizada.',
+  )

@@ -2,7 +2,6 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { LoaderCircle } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Controller, useForm, useWatch } from 'react-hook-form'
-import { toast } from 'sonner'
 
 import type {
   BusinessWeek,
@@ -163,15 +162,11 @@ function AnchorTransitionForm({
           setStep('choose')
         }}
         onConfirm={(justification) =>
-          transition.mutate(
-            { ...request, justification, expected_version: result.expected_version },
-            {
-              onSuccess: () => {
-                toast.success('Receita âncora atualizada.')
-                onDone()
-              },
-            },
-          )
+          // mutateAsync, not mutate: the refreshed schedules and cycles can take this sheet off the
+          // screen before the answer is handled. The error shows from `transition.error`.
+          void transition
+            .mutateAsync({ ...request, justification, expected_version: result.expected_version })
+            .then(onDone, () => undefined)
         }
       >
         <TransitionReview preview={result} anchor={anchor} next={next} />

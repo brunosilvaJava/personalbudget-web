@@ -1,6 +1,6 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { http, HttpResponse } from 'msw'
+import { delay, http, HttpResponse } from 'msw'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type {
@@ -362,6 +362,9 @@ describe('Ciclos', () => {
       )
       expect(await screen.findByText('Ciclos desligados.')).toBeInTheDocument()
       expect(await screen.findByText('Mês do calendário')).toBeInTheDocument()
+      await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+      // The sheet is not left "open" behind the screen: turning the cycles on again does not bring it back.
+      expect(screen.getByRole('button', { name: 'Ativar os ciclos' })).toBeInTheDocument()
     })
 
     it('should show the 409 of a configuration changed elsewhere', async () => {
@@ -673,6 +676,63 @@ describe('Ciclos', () => {
         ]),
       )
       expect(await screen.findByText('Virada ajustada.')).toBeInTheDocument()
+    })
+
+    it('should tell it and close the sheet even when the refreshed cycles take it off the screen first', async () => {
+      mockCycles({
+        config: CYCLES_ON,
+        cycles: [PREVIOUS, CURRENT, NEXT],
+        endPreview: END_PREVIEW,
+      })
+      const movedCurrent = {
+        ...CURRENT,
+        end_date_exclusive: '2026-12-02',
+        last_day: '2026-12-01',
+        total_days: 27,
+        end_adjusted: true,
+        version: 5,
+      }
+      const movedNext = { ...NEXT, start_date: '2026-12-02', total_days: 34, start_adjusted: true }
+      let adjusted = false
+      server.use(
+        http.post('/api/pay_cycle/:code/end_adjustment', () => {
+          adjusted = true
+          return HttpResponse.json({
+            adjustment: payCycleAdjustment(),
+            cycle: movedCurrent,
+            next_cycle: movedNext,
+          })
+        }),
+        http.get('/api/pay_cycle/cycle-now', () =>
+          HttpResponse.json(adjusted ? movedCurrent : CURRENT),
+        ),
+        // The list comes after the cycle: for a moment the page has the new end and the old next
+        // cycle, finds no cycle that starts there, and drops the sheet.
+        http.get('/api/pay_cycle', async () => {
+          if (adjusted) await delay(400)
+          return HttpResponse.json(
+            adjusted ? [PREVIOUS, movedCurrent, movedNext] : [PREVIOUS, CURRENT, NEXT],
+          )
+        }),
+      )
+      renderApp('/ciclos/cycle-now')
+
+      const sheet = await openAdjustment()
+      fireEvent.change(within(sheet).getByLabelText('Novo primeiro dia de Dez/Jan'), {
+        target: { value: '2026-12-02' },
+      })
+      await userEvent.click(within(sheet).getByRole('button', { name: 'Ver o que muda' }))
+      await within(sheet).findByText(/A virada passa de/)
+      await userEvent.type(within(sheet).getByLabelText('Motivo'), 'Salário caiu mais cedo')
+      await userEvent.click(within(sheet).getByRole('button', { name: 'Ajustar a virada' }))
+
+      // (sonner keeps its toasts between tests, so the one of the test before may be here too)
+      expect(await screen.findAllByText('Virada ajustada.')).not.toHaveLength(0)
+      expect(await screen.findByText(/Esta virada foi ajustada à mão/)).toBeInTheDocument()
+      // Once the list is fresh the button is back, which only happens with the sheet closed (an open
+      // sheet hides the page from the accessibility tree) and not put back by the refreshed cycles.
+      expect(await screen.findByRole('button', { name: 'Ajustar a virada' })).toBeInTheDocument()
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     })
 
     it('should refuse the same boundary and a date outside the two cycles, without asking the back', async () => {
