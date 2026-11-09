@@ -22,11 +22,11 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet'
+import { describePayCyclePending } from '@/features/pay-cycles/rules'
 import { errorMessage } from '@/lib/api-errors'
 import { formatDate, formatMonth } from '@/lib/format'
 import { useOnline } from '@/lib/online'
 import { usePreviewHolidayYear, useSaveHolidayYear } from './queries'
-import { describePayCyclePending } from './rules'
 import {
   holidayYearDefaults,
   holidayYearSchema,

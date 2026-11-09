@@ -1,6 +1,7 @@
 import {
   ArrowLeftRight,
   CalendarClock,
+  CalendarRange,
   ChartLine,
   Ellipsis,
   HandCoins,
@@ -30,4 +31,5 @@ export const MORE_ITEMS: readonly NavItem[] = [
   { to: '/caixa', label: 'Caixa diário', icon: ChartLine },
   { to: '/recorrentes', label: 'Recorrentes', icon: CalendarClock },
   { to: '/receita', label: 'Receita', icon: HandCoins },
+  { to: '/ciclos', label: 'Ciclos', icon: CalendarRange },
 ]

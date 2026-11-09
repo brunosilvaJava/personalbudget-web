@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
   currentMonth,
   dateOf,
+  daysBetween,
   monthOf,
   monthRange,
   nowApiDateTime,
@@ -81,5 +82,17 @@ describe('Brasília clock', () => {
     expect(shiftDate('2026-11-05', -1)).toBe('2026-11-04')
     expect(dateOf('2026-11-10T15:30:00')).toBe('2026-11-10')
     expect(monthOf('2026-11-10')).toBe('2026-11')
+  })
+})
+
+describe('daysBetween', () => {
+  it('should count the calendar days from one date to the other', () => {
+    expect(daysBetween('2026-11-10', '2026-11-12')).toBe(2)
+    expect(daysBetween('2026-11-30', '2026-12-01')).toBe(1)
+    expect(daysBetween('2026-11-10', '2026-11-10')).toBe(0)
+  })
+
+  it('should be negative when the second date is earlier', () => {
+    expect(daysBetween('2026-11-12', '2026-11-10')).toBe(-2)
   })
 })

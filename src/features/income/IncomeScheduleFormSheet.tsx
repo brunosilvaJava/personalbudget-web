@@ -34,6 +34,7 @@ import {
 import { Switch } from '@/components/ui/switch'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { CategorySelect } from '@/features/categories/CategorySelect'
+import { AnchorLockedNote } from '@/features/pay-cycles/AnchorLockedNote'
 import { useFixedBills } from '@/features/recurring/queries'
 import { applyApiErrors } from '@/lib/api-errors'
 import { formatShortMonth } from '@/lib/format'
@@ -155,6 +156,7 @@ function IncomeScheduleForm({
   return (
     <form onSubmit={(event) => void onSubmit(event)} className="contents" noValidate>
       <SheetBody>
+        {schedule && <AnchorLockedNote schedule={schedule} />}
         <Field
           id="income-description"
           label="Descrição"

@@ -96,3 +96,9 @@ export function brDate(date: string): string {
   const [year, month, day] = date.split('-')
   return `${day}/${month}/${year}`
 }
+
+/** The date `days` days from `date` ("2026-11-30" + 1 → "2026-12-01"), in plain calendar arithmetic. */
+export function shiftDate(date: string, days: number): string {
+  const [year, month, day] = date.split('-').map(Number) as [number, number, number]
+  return new Date(Date.UTC(year, month - 1, day + days)).toISOString().slice(0, 10)
+}
