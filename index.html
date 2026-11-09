@@ -8,9 +8,15 @@
     <meta name="theme-color" content="#0a0a0a" media="(prefers-color-scheme: dark)" />
     <title>PersonalBudget</title>
     <script>
-      // Applies the system theme before the first paint, so dark mode does not flash white.
-      // src/app/theme.ts keeps it in sync afterwards.
-      if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+      // Applies the theme before the first paint, so dark mode does not flash white: the choice
+      // made in "Mais" (src/lib/theme.ts, same key), otherwise the system's.
+      try {
+        var choice = localStorage.getItem('personalbudget.theme')
+      } catch (e) {}
+      if (
+        choice === 'dark' ||
+        (choice !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches)
+      ) {
         document.documentElement.classList.add('dark')
       }
     </script>

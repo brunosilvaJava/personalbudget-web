@@ -1,4 +1,6 @@
 import type {
+  AccountResponse,
+  AccountTransferResponse,
   CategoryGroupResponse,
   CategoryResponse,
   FinancialMovementResponse,
@@ -114,6 +116,52 @@ export function payCycle(overrides: Partial<PayCycleResponse> = {}): PayCycleRes
     end_adjusted: false,
     version: 1,
     pending: [],
+    ...overrides,
+  }
+}
+
+export const accounts = {
+  main: {
+    code: 'a0000001-0000-4000-8000-000000000001',
+    name: 'Conta principal',
+    type: 'CHECKING',
+    initial_balance: 1500,
+    initial_balance_date: '2026-01-01',
+    status: 'ACTIVE',
+    default: true,
+  } satisfies AccountResponse,
+  wallet: {
+    code: 'a0000002-0000-4000-8000-000000000002',
+    name: 'Carteira',
+    type: 'CASH',
+    initial_balance: 80,
+    initial_balance_date: '2026-11-01',
+    status: 'ACTIVE',
+    default: false,
+  } satisfies AccountResponse,
+  old: {
+    code: 'a0000003-0000-4000-8000-000000000003',
+    name: 'Banco antigo',
+    type: 'SAVINGS',
+    initial_balance: 0,
+    initial_balance_date: '2025-01-01',
+    status: 'INACTIVE',
+    default: false,
+  } satisfies AccountResponse,
+}
+
+export function transfer(
+  overrides: Partial<AccountTransferResponse> = {},
+): AccountTransferResponse {
+  return {
+    code: code('t'),
+    from_account_code: accounts.main.code,
+    to_account_code: accounts.wallet.code,
+    amount: 200,
+    effective_date: '2026-11-05',
+    description: 'Dinheiro vivo',
+    reversed_at: null,
+    version: 0,
     ...overrides,
   }
 }

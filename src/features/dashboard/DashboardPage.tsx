@@ -13,7 +13,7 @@ export function DashboardPage() {
         <EmptyState
           icon={LayoutDashboard}
           title="Dashboard em construção"
-          description="Saldo atual e projetado, receitas, despesas e alerta de saldo negativo chegam na Fase 2."
+          description="Saldo atual e projetado, receitas, despesas e alerta de saldo negativo chegam na Fase 3."
         />
       </div>
     </>
