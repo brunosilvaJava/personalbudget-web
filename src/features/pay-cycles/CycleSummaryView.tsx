@@ -12,9 +12,15 @@ import { describeSummaryPending } from './rules'
 export function CycleSummaryView({
   summary,
   full = false,
+  caption = 'Totais do ciclo',
+  showIncompleteNote = true,
 }: {
   summary: PayCycleSummaryResponse
   full?: boolean
+  /** the name of the totals table for a screen reader; several can be on one screen */
+  caption?: string
+  /** off where the incomplete projection is already said another way (the closure blockers) */
+  showIncompleteNote?: boolean
 }) {
   const recognizedResult = summary.recognized_revenue - summary.recognized_expense
   const projectedResult = summary.projected_revenue - summary.projected_expense
@@ -23,7 +29,7 @@ export function CycleSummaryView({
 
   return (
     <div className="flex flex-col gap-4">
-      {summary.projection_incomplete && (
+      {showIncompleteNote && summary.projection_incomplete && (
         <div
           role="note"
           className="flex gap-3 rounded-lg border border-warning/40 bg-warning/10 p-4 text-sm"
@@ -47,7 +53,7 @@ export function CycleSummaryView({
       )}
 
       <table className="w-full text-sm">
-        <caption className="sr-only">Totais do ciclo</caption>
+        <caption className="sr-only">{caption}</caption>
         <thead>
           <tr className="text-left text-muted-foreground">
             <th scope="col" className="pb-2 font-normal">

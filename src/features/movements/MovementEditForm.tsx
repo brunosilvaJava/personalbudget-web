@@ -13,6 +13,8 @@ import { Input } from '@/components/ui/input'
 import { SheetBody, SheetFooter } from '@/components/ui/sheet'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { CategorySelect } from '@/features/categories/CategorySelect'
+import { ClosedCycleNote } from '@/features/pay-cycles/ClosedCycleNote'
+import { useClosedCycle } from '@/features/pay-cycles/queries'
 import { applyApiErrors } from '@/lib/api-errors'
 import { useOnline } from '@/lib/online'
 import { useUpdateMovement } from './queries'
@@ -38,6 +40,7 @@ interface MovementEditFormProps {
 export function MovementEditForm({ movement, onCancel, onSaved }: MovementEditFormProps) {
   const online = useOnline()
   const update = useUpdateMovement()
+  const closedCycle = useClosedCycle(movement.competence_date ?? undefined)
   const [formError, setFormError] = useState<string | null>(null)
   const { register, control, handleSubmit, setValue, setError, formState } = useForm<
     MovementEditInput,
@@ -74,6 +77,13 @@ export function MovementEditForm({ movement, onCancel, onSaved }: MovementEditFo
   return (
     <form onSubmit={(event) => void onSubmit(event)} className="contents" noValidate>
       <SheetBody>
+        {closedCycle && (
+          <ClosedCycleNote cycle={closedCycle}>
+            Valor, tipo, categoria e competência não podem mudar enquanto ele estiver fechado; a
+            descrição e o vencimento sim.
+          </ClosedCycleNote>
+        )}
+
         {hasPayment && (
           <div className="flex gap-2 rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm">
             <TriangleAlert className="mt-0.5 size-4 shrink-0 text-warning" aria-hidden />

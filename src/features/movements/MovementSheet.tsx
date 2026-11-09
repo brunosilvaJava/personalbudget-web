@@ -34,6 +34,8 @@ import {
 } from '@/components/ui/sheet'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useCategoryLookup } from '@/features/categories/queries'
+import { ClosedCycleNote } from '@/features/pay-cycles/ClosedCycleNote'
+import { useClosedCycle } from '@/features/pay-cycles/queries'
 import { AccountSelect } from '@/features/wallet/AccountSelect'
 import { PurchaseSheet } from '@/features/wallet/PurchaseSheet'
 import { useActiveAccounts } from '@/features/wallet/queries'
@@ -188,6 +190,7 @@ function Details({
   const online = useOnline()
   const categories = useCategoryLookup()
   const remove = useDeleteMovement()
+  const closedCycle = useClosedCycle(movement.competence_date ?? undefined)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [showPurchase, setShowPurchase] = useState(false)
@@ -280,6 +283,13 @@ function Details({
           <SettlementList movement={movement} />
         )}
 
+        {closedCycle && !card && (
+          <ClosedCycleNote cycle={closedCycle}>
+            Esta movimentação não pode ser excluída, e valor, tipo, categoria e competência ficam
+            travados. Pagar e estornar continuam livres. Reabra o ciclo para mudar o resto.
+          </ClosedCycleNote>
+        )}
+
         {deleteError && <FormAlert message={deleteError} />}
       </SheetBody>
       {!card && (
@@ -298,7 +308,7 @@ function Details({
               variant="outline"
               className="h-11 flex-1 text-destructive hover:text-destructive"
               onClick={() => setConfirmDelete(true)}
-              disabled={!online}
+              disabled={!online || closedCycle !== null}
             >
               <Trash2 aria-hidden />
               Excluir

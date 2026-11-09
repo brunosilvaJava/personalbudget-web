@@ -10,6 +10,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { usePayCycle } from '@/features/period/queries'
 import { formatDate } from '@/lib/format'
 import { AdjustmentHistory } from './AdjustmentHistory'
+import { ClosureSection } from './ClosureSection'
 import { CycleFlags, CycleStatusBadge } from './CycleBadges'
 import { CycleSummaryView } from './CycleSummaryView'
 import { EndAdjustmentSheet } from './EndAdjustmentSheet'
@@ -90,6 +91,8 @@ function CycleView({ cycle }: { cycle: PayCycleResponse }) {
           </Link>
         </Button>
       </section>
+
+      <ClosureSection cycle={cycle} />
 
       <BoundarySection cycle={cycle} />
       <AdjustmentHistory code={cycle.code} />

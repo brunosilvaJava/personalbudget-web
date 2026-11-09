@@ -10,6 +10,9 @@ import {
   type PayCycleAnchorTransitionPreviewResponse,
   type PayCycleAnchorTransitionRequest,
   type PayCycleAnchorTransitionResponse,
+  type PayCycleClosurePreviewResponse,
+  type PayCycleClosureRequest,
+  type PayCycleClosureResponse,
   type PayCycleConfigResponse,
   type PayCycleDeactivationRequest,
   type PayCycleEndAdjustmentPreviewRequest,
@@ -17,7 +20,9 @@ import {
   type PayCycleEndAdjustmentRequest,
   type PayCycleEndAdjustmentResponse,
   type PayCycleQuery,
+  type PayCycleReopenRequest,
   type PayCycleResponse,
+  type PayCycleSnapshotResponse,
   type PayCycleSummaryResponse,
   type UUID,
 } from './contracts'
@@ -89,6 +94,38 @@ export function adjustEnd(
   body: PayCycleEndAdjustmentRequest,
 ): Promise<PayCycleEndAdjustmentResponse> {
   return request(`${base}/${code}/end_adjustment`, { method: 'POST', body })
+}
+
+/**
+ * What closing would freeze and what blocks it. Read-only; the back answers 409 for a cycle that is
+ * already CLOSED or CANCELLED (and when the cycles are off), so the screens do not ask for those.
+ */
+export function previewClosure(
+  code: UUID,
+  signal?: AbortSignal,
+): Promise<PayCycleClosurePreviewResponse> {
+  return request(`${base}/${code}/closure/preview`, { method: 'POST', signal })
+}
+
+/** Freezes the cycle in a new snapshot. 409 when the version is stale or something still blocks. */
+export function closeCycle(
+  code: UUID,
+  body: PayCycleClosureRequest,
+): Promise<PayCycleClosureResponse> {
+  return request(`${base}/${code}/closure`, { method: 'POST', body })
+}
+
+/** CLOSED → open again. The old snapshots stay; closing again makes a new version. */
+export function reopenCycle(code: UUID, body: PayCycleReopenRequest): Promise<PayCycleResponse> {
+  return request(`${base}/${code}/reopen`, { method: 'POST', body })
+}
+
+/** Every snapshot of the cycle, as the back keeps them (by version); empty while never closed. */
+export function listSnapshots(
+  code: UUID,
+  signal?: AbortSignal,
+): Promise<PayCycleSnapshotResponse[]> {
+  return request(`${base}/${code}/snapshots`, { signal })
 }
 
 // ───────────────────────── /pay_cycle_config ─────────────────────────
