@@ -36,12 +36,6 @@ test('a monthly bill due today is posted as soon as it is saved, once', async ({
   page,
   request,
 }) => {
-  // Known failure of the back-end, not of the front: POST /fixed_bill answers 500 ("Column
-  // 'due_date' cannot be null") because the movement it posts on save has no movement_date and no
-  // due_date. When the back is fixed this test passes, Playwright flags the unexpected pass, and
-  // this line goes away.
-  test.fail(true, 'back-end: the movement posted on save has no due_date (500)')
-
   const description = unique('Internet')
   await createMonthlyBill(page, description, Number(todayIso().slice(8, 10)))
 
