@@ -49,6 +49,17 @@ jobs:
 
       - run: npm ci
 
+      - name: Pin the Gradle image of the back's Dockerfile
+        working-directory: back
+        run: |
+          # `gradle:jdk21` now means Gradle 9, and the back (Gradle 8.6 in the wrapper, Spring
+          # Dependency Management 1.1.4) does not build on it: "Failed to notify dependency
+          # resolution listener". Drop this step when the back's Dockerfile pins the image itself.
+          if grep -q '^FROM gradle:jdk21' Dockerfile; then
+            sed -i 's|^FROM gradle:jdk21 as gradle|FROM gradle:8.6-jdk21 AS gradle|' Dockerfile
+          fi
+          head -3 Dockerfile
+
       - name: Start the back-end (MySQL + API, empty database)
         working-directory: back
         run: docker compose -p "$BACK_PROJECT" --profile app up -d --build
