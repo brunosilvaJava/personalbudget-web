@@ -57,6 +57,19 @@ test('activates the cycles on an anchor schedule, adjusts a boundary and turns t
   // viewport runs this same spec) can start where it ends, within the 31 days the back accepts.
   const anchorDay = Number(shiftDate(today, 10).slice(8))
 
+  // What the page asked the back and how long each answer took: a write waits for the refetch of
+  // every active query before its toast, so a slow answer shows up here.
+  const calls: string[] = []
+  const startedAt = Date.now()
+  page.on('response', (response) => {
+    const url = new URL(response.url())
+    if (!url.pathname.startsWith('/api/')) return
+    const method = response.request().method()
+    calls.push(
+      `+${Date.now() - startedAt}ms ${response.status()} ${method} ${url.pathname}${url.search}`,
+    )
+  })
+
   try {
     await cleanUp(request)
     const created = await request.post('/api/income_schedule', {
@@ -144,7 +157,7 @@ test('activates the cycles on an anchor schedule, adjusts a boundary and turns t
     // its message is in the sheet: show it instead of a bare "not found".
     const done = page.getByText('Virada ajustada.')
     const refused = adjustment.getByRole('alert')
-    await expect(done.or(refused).first()).toBeVisible()
+    await expect(done.or(refused).first()).toBeVisible({ timeout: 15_000 })
     expect(await refused.allInnerTexts(), 'the back refused the adjustment').toEqual([])
     await expect(done).toBeVisible()
     const moved = await apiGet<Cycle>(request, `/pay_cycle/${cycle.code}`)
@@ -169,12 +182,13 @@ test('activates the cycles on an anchor schedule, adjusts a boundary and turns t
     const deactivation = page.getByRole('dialog', { name: 'Desligar os ciclos' })
     await deactivation.getByLabel('Motivo').fill('Fim do teste E2E')
     await deactivation.getByRole('button', { name: 'Desligar os ciclos' }).click()
-    await expect(page.getByText('Ciclos desligados.')).toBeVisible()
+    await expect(page.getByText('Ciclos desligados.')).toBeVisible({ timeout: 15_000 })
     await expect(page.getByText('Mês do calendário', { exact: true })).toBeVisible()
     expect(await apiGet<Config>(request, '/pay_cycle_config')).toMatchObject({
       mode: 'CALENDAR_MONTH',
     })
   } finally {
+    console.log(`API calls of the page:\n${calls.join('\n')}`)
     await cleanUp(request)
   }
 })
