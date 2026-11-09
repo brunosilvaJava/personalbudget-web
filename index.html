@@ -3,14 +3,28 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#0a0a0a" media="(prefers-color-scheme: dark)" />
+    <meta
+      name="description"
+      content="Seu orçamento pessoal: lançamentos, contas, cartões e caixa."
+    />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="PersonalBudget" />
     <title>PersonalBudget</title>
     <script>
-      // Applies the system theme before the first paint, so dark mode does not flash white.
-      // src/app/theme.ts keeps it in sync afterwards.
-      if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+      // Applies the theme before the first paint, so dark mode does not flash white: the choice
+      // made in "Mais" (src/lib/theme.ts, same key), otherwise the system's.
+      try {
+        var choice = localStorage.getItem('personalbudget.theme')
+      } catch (e) {}
+      if (
+        choice === 'dark' ||
+        (choice !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches)
+      ) {
         document.documentElement.classList.add('dark')
       }
     </script>

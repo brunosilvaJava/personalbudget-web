@@ -3,19 +3,21 @@ import { Link } from 'react-router'
 
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import { LAUNCH_PATH } from './nav-items'
+import { useLaunchLink } from './launch'
 
 interface LaunchButtonProps {
-  /** round floating button (phone) or full-width button (sidebar) */
+  /** round floating button (phone) or full-width button (sidebar, empty states) */
   variant?: 'floating' | 'wide'
   className?: string
 }
 
 export function LaunchButton({ variant = 'floating', className }: LaunchButtonProps) {
+  const { to, state } = useLaunchLink()
+
   if (variant === 'wide') {
     return (
       <Button asChild size="lg" className={cn('h-11 w-full', className)}>
-        <Link to={LAUNCH_PATH}>
+        <Link to={to} state={state}>
           <Plus aria-hidden />
           Lançar
         </Link>
@@ -32,7 +34,7 @@ export function LaunchButton({ variant = 'floating', className }: LaunchButtonPr
         className,
       )}
     >
-      <Link to={LAUNCH_PATH} aria-label="Lançar">
+      <Link to={to} state={state} aria-label="Lançar">
         <Plus aria-hidden />
       </Link>
     </Button>

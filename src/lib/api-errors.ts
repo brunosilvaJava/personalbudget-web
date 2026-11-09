@@ -30,13 +30,17 @@ export function isRetryable(error: unknown): boolean {
 export function applyApiErrors<T extends FieldValues>(
   error: unknown,
   setError: UseFormSetError<T>,
-  fields: readonly Path<T>[],
+  /**
+   * The request's field names. They need not be form fields: a key like `days`, which the form
+   * splits into one control per recurrence, still gets an error by path that the form reads.
+   */
+  fields: readonly string[],
 ): string | null {
   if (!(error instanceof ApiError) || error.status !== 400) return errorMessage(error)
 
   const leftovers: string[] = []
   for (const [key, message] of Object.entries(error.validations)) {
-    if ((fields as readonly string[]).includes(key)) {
+    if (fields.includes(key)) {
       setError(key as Path<T>, { type: 'server', message })
     } else {
       leftovers.push(message)
@@ -44,4 +48,30 @@ export function applyApiErrors<T extends FieldValues>(
   }
   if (Object.keys(error.validations).length === 0) return error.message
   return leftovers.length > 0 ? leftovers.join(' ') : null
+}
+
+/** The 400's field → message map, empty for anything else (a key is the snake_case request field). */
+export function validationsOf(error: unknown): Record<string, string> {
+  return error instanceof ApiError && error.status === 400 ? error.validations : {}
+}
+
+/**
+ * Splits what a failed write answered when ONE field has its own place on screen: the 400 on
+ * `field` goes under it, anything else (other 400 keys, 409, 500, network) above the buttons.
+ */
+export function splitFieldError(
+  error: unknown,
+  field: string,
+): { field: string | null; message: string | null } {
+  const { [field]: own, ...rest } = validationsOf(error)
+  const others = Object.values(rest)
+  if (own || others.length > 0) {
+    return { field: own ?? null, message: others.length > 0 ? others.join(' ') : null }
+  }
+  return { field: null, message: errorMessage(error) }
+}
+
+/** The record is gone (deleted elsewhere, or a stale link). */
+export function isNotFound(error: unknown): boolean {
+  return error instanceof ApiError && error.isNotFound
 }

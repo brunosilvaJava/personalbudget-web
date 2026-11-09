@@ -1,4 +1,12 @@
-import { addDays, addMonths, endOfMonth, format, parseISO, startOfMonth } from 'date-fns'
+import {
+  addDays,
+  addMonths,
+  differenceInCalendarDays,
+  endOfMonth,
+  format,
+  parseISO,
+  startOfMonth,
+} from 'date-fns'
 
 import type { ISODate, ISODateTime, YearMonth } from '@/api/contracts'
 
@@ -44,6 +52,11 @@ export function shiftMonth(month: YearMonth, offset: number): YearMonth {
 /** The date `days` days away, e.g. the day before a cycle starts. */
 export function shiftDate(date: ISODate, days: number): ISODate {
   return toApiDate(addDays(parseISO(date), days))
+}
+
+/** Calendar days from `from` to `to` (negative when `to` is earlier): 2026-11-10 → 2026-11-12 is 2. */
+export function daysBetween(from: ISODate, to: ISODate): number {
+  return differenceInCalendarDays(parseISO(to), parseISO(from))
 }
 
 /** The month of a date: "2026-11-10" → "2026-11". */

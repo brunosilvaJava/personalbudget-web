@@ -14,6 +14,8 @@
  * card links on movements (E9d), budget envelopes (E10) and the cash forecast (E11). Settlements gained
  * account_code; FinancialMovementResponse gained card_purchase_code, card_invoice_code, installment_number.
  *
+ * ADDED on 2026-11-09 (front Phase 2a): GET /account/{code}/statement (back PR #99), additive.
+ *
  * BREAKING CHANGES since the 2026-11-03 version of this file:
  *  - POST/PATCH /financial_movement no longer accept amount_paid, pay_date or status (400). Payments
  *    are settlements (see /financial_movement/{code}/settlements). The status is derived by the server.
@@ -693,6 +695,56 @@ export interface AccountsBalanceResponse {
   date: ISODate
   accounts: AccountBalanceResponse[]
   total: Money
+}
+
+/** What moved the balance on a line of the statement (back PR #99). */
+export const ACCOUNT_STATEMENT_ENTRY_TYPES = [
+  'INITIAL_BALANCE',
+  'SETTLEMENT',
+  'TRANSFER_IN',
+  'TRANSFER_OUT',
+] as const
+export type AccountStatementEntryType = (typeof ACCOUNT_STATEMENT_ENTRY_TYPES)[number]
+
+export interface AccountStatementEntryResponse {
+  type: AccountStatementEntryType
+  date: ISODate
+  /** signed: credits and incoming transfers positive, debits and outgoing transfers negative */
+  amount: Money
+  /** the account balance right after this line */
+  balance: Money
+  /** of the movement or the transfer; "Saldo inicial" for the initial balance; null for a transfer without one */
+  description: string | null
+  /** only for SETTLEMENT */
+  movement_code: UUID | null
+  settlement_code: UUID | null
+  category_code: UUID | null
+  /** the card invoice payment that generated the settlement, when it did */
+  invoice_payment_code: UUID | null
+  /** only for TRANSFER_IN and TRANSFER_OUT */
+  transfer_code: UUID | null
+  counterpart_account_code: UUID | null
+}
+
+/**
+ * GET /account/{code}/statement?start_date&end_date (back PR #99). Both required and inclusive, at
+ * most 366 days (400). opening_balance is the balance at the end of the day before start_date;
+ * closing_balance = opening + the entries = GET /account/{code}/balance?date=end_date. Oldest first;
+ * on the same day the initial balance, then settlements, then transfers. Reversed settlements and
+ * transfers are left out, as in the balance.
+ */
+export interface AccountStatementResponse {
+  account_code: UUID
+  start_date: ISODate
+  end_date: ISODate
+  opening_balance: Money
+  closing_balance: Money
+  entries: AccountStatementEntryResponse[]
+}
+
+export interface AccountStatementQuery {
+  start_date: ISODate
+  end_date: ISODate
 }
 
 // ───────────────────────── /account_transfer (E8b) ─────────────────────────
@@ -1696,6 +1748,7 @@ export interface HealthResponse {
  * PATCH  /account/{code}/activate    200 AccountResponse
  * GET    /account/balance[?date]     200 AccountsBalanceResponse   (all accounts + total)
  * GET    /account/{code}/balance[?date] 200 AccountBalanceResponse
+ * GET    /account/{code}/statement?start_date&end_date 200 AccountStatementResponse (back PR #99)
  *
  * POST   /account_transfer           201 AccountTransferResponse
  * GET    /account_transfer           200 AccountTransferResponse[] (start_date, end_date required; reversed included)

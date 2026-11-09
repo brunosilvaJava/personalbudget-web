@@ -1,10 +1,13 @@
 import type { QueryClient } from '@tanstack/react-query'
 
 import type {
+  AccountStatus,
   CategoryStatus,
+  CreditCardStatus,
   FinancialMovementQuery,
   FixedBillQuery,
   ISODate,
+  IncomeScheduleStatus,
   InstallmentBillQuery,
   UUID,
   YearMonth,
@@ -34,15 +37,52 @@ export const queryKeys = {
   categories: (statuses: readonly CategoryStatus[]) => ['categories', statuses] as const,
   categoryGroups: ['category-groups'] as const,
 
-  fixedBills: (filters: FixedBillQuery) => ['fixed-bills', CURRENT_SCOPE, filters] as const,
+  fixedBills: (filters: Omit<FixedBillQuery, 'page' | 'size'>) =>
+    ['fixed-bills', CURRENT_SCOPE, filters] as const,
   fixedBill: (code: UUID) => ['fixed-bill', CURRENT_SCOPE, code] as const,
-  installmentBills: (filters: InstallmentBillQuery) =>
+  installmentBills: (filters: Omit<InstallmentBillQuery, 'page' | 'size'>) =>
     ['installment-bills', CURRENT_SCOPE, filters] as const,
   installmentBill: (code: UUID) => ['installment-bill', CURRENT_SCOPE, code] as const,
+
+  accounts: (statuses: readonly AccountStatus[]) => ['accounts', statuses] as const,
+  account: (code: UUID) => ['account', code] as const,
+  accountBalances: (date: ISODate | 'today') => ['account-balances', date] as const,
+  accountBalance: (code: UUID, date: ISODate | 'today') => ['account-balance', code, date] as const,
+  accountStatement: (code: UUID, start: ISODate, end: ISODate) =>
+    ['account-statement', code, start, end] as const,
+  transfers: (start: ISODate, end: ISODate, accountCode: UUID | null) =>
+    ['transfers', start, end, accountCode] as const,
+
+  creditCards: (statuses: readonly CreditCardStatus[]) => ['credit-cards', statuses] as const,
+  creditCard: (code: UUID) => ['credit-cards', 'code', code] as const,
+  cardLimit: (code: UUID) => ['card-limit', code] as const,
+  cardInvoices: (cardCode: UUID) => ['card-invoices', cardCode] as const,
+  cardInvoice: (code: UUID) => ['card-invoice', code] as const,
+  invoicePayments: (invoiceCode: UUID) => ['invoice-payments', invoiceCode] as const,
+  cardPurchase: (code: UUID) => ['card-purchase', code] as const,
+
+  incomeSchedules: (statuses: readonly IncomeScheduleStatus[]) =>
+    ['income-schedules', statuses] as const,
+  incomeSchedule: (code: UUID) => ['income-schedule', code] as const,
+  incomeOccurrences: (code: UUID, from: YearMonth, to: YearMonth) =>
+    ['income-occurrences', code, from, to] as const,
+  holidayYears: ['holidays', 'years'] as const,
+  holidayYear: (year: number) => ['holidays', 'year', year] as const,
 
   currentPayCycle: ['pay-cycles', 'current'] as const,
   payCycleByDate: (date: ISODate) => ['pay-cycles', 'date', date] as const,
   payCycle: (code: UUID) => ['pay-cycles', 'code', code] as const,
+  payCycles: (includeCancelled: boolean) => ['pay-cycles', 'list', includeCancelled] as const,
+  payCycleConfig: ['pay-cycle-config'] as const,
+  payCycleSummary: (code: UUID) => ['pay-cycle-summary', code] as const,
+  payCycleAdjustments: (code: UUID) => ['pay-cycle-adjustments', code] as const,
+  payCycleSnapshots: (code: UUID) => ['pay-cycle-snapshots', code] as const,
+  payCycleClosurePreview: (code: UUID) => ['pay-cycle-closure-preview', code] as const,
+
+  envelopes: (cycleCode: UUID) => ['envelopes', cycleCode] as const,
+  /** `until` null is the back's own horizon (the end of the current cycle, or of the month) */
+  forecast: (until: ISODate | null, includeLateIncome: boolean) =>
+    ['forecast', until, includeLateIncome] as const,
 }
 
 /**
@@ -85,3 +125,33 @@ export function invalidateFinancial(queryClient: QueryClient): Promise<void> {
     FINANCIAL_ROOT_KEYS.map((key) => queryClient.invalidateQueries({ queryKey: [key] })),
   ).then(() => undefined)
 }
+
+/**
+ * Root keys that an income schedule or a holiday calendar write can change, besides the financial
+ * group: the schedules, the calendar and the pay cycles (a reviewed year refreshes the boundaries).
+ */
+const INCOME_ROOT_KEYS = [
+  'income-schedules',
+  'income-schedule',
+  'holidays',
+  'pay-cycles',
+  'pay-cycle-config',
+  'pay-cycle-adjustments',
+  'pay-cycle-snapshots',
+  'pay-cycle-closure-preview',
+] as const
+
+/** Called in the onSuccess of every write to an income schedule or to the holiday calendar. */
+export function invalidateIncome(queryClient: QueryClient): Promise<void> {
+  return Promise.all([
+    invalidateFinancial(queryClient),
+    ...INCOME_ROOT_KEYS.map((key) => queryClient.invalidateQueries({ queryKey: [key] })),
+  ]).then(() => undefined)
+}
+
+/**
+ * Called in the onSuccess of every write to the cycles (activate, deactivate, adjust a boundary,
+ * change the anchor). The boundaries decide the default period of the lists and every cycle report,
+ * and a changed anchor changes the schedules: it is the income group and the financial group.
+ */
+export const invalidatePayCycles = invalidateIncome

@@ -1,0 +1,146 @@
+import { expect, test } from '@playwright/test'
+
+import {
+  ANCHOR_PREFIX,
+  apiGet,
+  brDate,
+  cleanUpCycles,
+  createAnchor,
+  firstActivationDay,
+  shiftDate,
+  todayIso,
+  unique,
+  type PayCycle as Cycle,
+  type PayCycleConfig as Config,
+} from './helpers'
+
+let failedCalls: string[] = []
+test.afterEach(() => {
+  const info = test.info()
+  if (info.status !== info.expectedStatus) {
+    console.log(`API calls of the page:\n${failedCalls.join('\n')}`)
+  }
+  failedCalls = []
+})
+
+test('activates the cycles on an anchor schedule, adjusts a boundary and turns them off', async ({
+  page,
+  request,
+}) => {
+  const description = unique(ANCHOR_PREFIX)
+  const today = todayIso()
+  // What the page asked the back, in order: printed only when the test fails.
+  const calls: string[] = []
+  const startedAt = Date.now()
+  page.on('response', (response) => {
+    const url = new URL(response.url())
+    if (!url.pathname.startsWith('/api/')) return
+    const method = response.request().method()
+    calls.push(
+      `+${Date.now() - startedAt}ms ${response.status()} ${method} ${url.pathname}${url.search}`,
+    )
+  })
+
+  try {
+    await cleanUpCycles(request)
+    const anchor = await createAnchor(request, description)
+
+    // A new activation starts at or after the end of the last cycle that exists.
+    const firstDay = await firstActivationDay(request)
+
+    // The cycles are off: see the first ones, then turn them on.
+    await page.goto('/ciclos')
+    await expect(page.getByText('Mês do calendário', { exact: true })).toBeVisible()
+    await page.getByRole('button', { name: 'Ativar os ciclos' }).click()
+    const activation = page.getByRole('dialog', { name: 'Ativar os ciclos' })
+    await expect(activation.getByText(description, { exact: true })).toBeVisible()
+    if (firstDay !== today) {
+      await activation.getByLabel('Primeiro dia do primeiro ciclo').fill(firstDay)
+    }
+    await activation.getByRole('button', { name: 'Ver os primeiros ciclos' }).click()
+    await expect(activation.getByText(`Os ciclos começam em ${brDate(firstDay)}`)).toBeVisible()
+    await activation.getByRole('button', { name: 'Ativar os ciclos' }).click()
+
+    await expect(page.getByText('Ciclos da receita âncora', { exact: true })).toBeVisible()
+    await expect(page.getByText(`ligados desde ${brDate(firstDay)}`, { exact: true })).toBeVisible()
+    const config = await apiGet<Config>(request, '/pay_cycle_config')
+    expect(config).toMatchObject({
+      mode: 'PAY_CYCLE',
+      anchor_schedule_code: anchor.code,
+      activation_date: firstDay,
+    })
+
+    // The current cycle, when today is in one, shows its report by competence.
+    const currentResponse = await request.get('/api/pay_cycle/current')
+    if (currentResponse.ok()) {
+      const current = (await currentResponse.json()) as Cycle
+      const region = page.getByRole('region', { name: 'Ciclo atual' })
+      await expect(region.getByText(current.label, { exact: true })).toBeVisible()
+      await expect(region.getByRole('table', { name: 'Totais do ciclo' })).toBeVisible()
+    } else {
+      await expect(page.getByText(/Hoje não cai em nenhum ciclo/)).toBeVisible()
+    }
+
+    // The chain is kept up to the current cycle plus two: the second one has a next cycle to move.
+    const chain = (await apiGet<Cycle[]>(request, '/pay_cycle'))
+      .filter((cycle) => cycle.start_date >= firstDay)
+      .sort((a, b) => a.start_date.localeCompare(b.start_date))
+    expect(chain.length).toBeGreaterThanOrEqual(3)
+    const [, cycle, next] = chain as [Cycle, Cycle, Cycle]
+    const newEnd = shiftDate(cycle.end_date_exclusive, -1)
+
+    await page.goto(`/ciclos/${cycle.code}`)
+    await expect(
+      page.getByRole('heading', { name: `Ciclo ${cycle.label}`, level: 1 }),
+    ).toBeVisible()
+    await page.getByRole('button', { name: 'Ajustar a virada' }).click()
+    const adjustment = page.getByRole('dialog', { name: 'Ajustar a virada' })
+    await adjustment.getByLabel(`Novo primeiro dia de ${next.label}`).fill(newEnd)
+    await adjustment.getByRole('button', { name: 'Ver o que muda' }).click()
+    await expect(
+      adjustment.getByText(
+        `A virada passa de ${brDate(cycle.end_date_exclusive)} para ${brDate(newEnd)}`,
+      ),
+    ).toBeVisible()
+    await adjustment.getByLabel('Motivo').fill('Ajuste do teste E2E')
+    await adjustment.getByRole('button', { name: 'Ajustar a virada' }).click()
+
+    // The boundary moved, was marked as set by hand and went to the history. When the back refuses,
+    // its message is in the sheet: show it instead of a bare "not found".
+    const done = page.getByText('Virada ajustada.')
+    const refused = adjustment.getByRole('alert')
+    await expect(done.or(refused).first()).toBeVisible({ timeout: 15_000 })
+    expect(await refused.allInnerTexts(), 'the back refused the adjustment').toEqual([])
+    await expect(done).toBeVisible()
+    const moved = await apiGet<Cycle>(request, `/pay_cycle/${cycle.code}`)
+    expect(moved).toMatchObject({ end_date_exclusive: newEnd, end_adjusted: true })
+    const adjustments = page.getByRole('region', { name: 'Histórico de ajustes' })
+    await expect(
+      adjustments.getByText(`${brDate(cycle.end_date_exclusive)} → ${brDate(newEnd)}`),
+    ).toBeVisible()
+    await expect(adjustments.getByText('“Ajuste do teste E2E”')).toBeVisible()
+
+    // The anchor schedule points to the transition instead of letting its rule change.
+    await page.goto(`/receita/agenda/${anchor.code}`)
+    const note = page.getByRole('note')
+    await expect(note).toContainText('só mudam pela transição de âncora')
+    await note.getByRole('link', { name: 'Mudar a receita âncora' }).click()
+    await expect(page.getByRole('dialog', { name: 'Mudar a receita âncora' })).toBeVisible()
+    await page.keyboard.press('Escape')
+
+    // Turning the cycles off asks why.
+    await page.goto('/ciclos')
+    await page.getByRole('button', { name: 'Desligar os ciclos' }).click()
+    const deactivation = page.getByRole('dialog', { name: 'Desligar os ciclos' })
+    await deactivation.getByLabel('Motivo').fill('Fim do teste E2E')
+    await deactivation.getByRole('button', { name: 'Desligar os ciclos' }).click()
+    await expect(page.getByText('Ciclos desligados.')).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByText('Mês do calendário', { exact: true })).toBeVisible()
+    expect(await apiGet<Config>(request, '/pay_cycle_config')).toMatchObject({
+      mode: 'CALENDAR_MONTH',
+    })
+  } finally {
+    failedCalls = calls
+    await cleanUpCycles(request)
+  }
+})
