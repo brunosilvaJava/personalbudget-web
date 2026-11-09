@@ -119,6 +119,7 @@ export interface PayCycle {
   end_date_exclusive: string
   end_adjusted: boolean
   status: string
+  version: number
 }
 
 export interface IncomeSchedule {
@@ -162,6 +163,7 @@ export async function createAnchor(
   request: APIRequestContext,
   description: string,
   daysAhead = 10,
+  startMonth = todayIso().slice(0, 7),
 ): Promise<IncomeSchedule> {
   const today = todayIso()
   const created = await request.post('/api/income_schedule', {
@@ -172,7 +174,7 @@ export async function createAnchor(
       rule_value: Number(shiftDate(today, daysAhead).slice(8)),
       business_week: 'MONDAY_TO_FRIDAY',
       non_business_day_policy: 'KEEP',
-      start_month: today.slice(0, 7),
+      start_month: startMonth,
       anchor: true,
     },
   })
@@ -191,9 +193,16 @@ export async function firstActivationDay(request: APIRequestContext): Promise<st
   return lastEnd && lastEnd > today ? lastEnd : today
 }
 
-/** Activates the cycles through the API (preview, then the version it answered) and returns the chain. */
-export async function activateCycles(request: APIRequestContext): Promise<PayCycle[]> {
-  const firstDay = await firstActivationDay(request)
+/**
+ * Activates the cycles through the API (preview, then the version it answered) and returns the
+ * chain. Without `initialDate` it starts where an activation may (today, or the end of the last
+ * cycle); a past one is only accepted up to 31 days back and not before the end of the last cycle.
+ */
+export async function activateCycles(
+  request: APIRequestContext,
+  initialDate?: string,
+): Promise<PayCycle[]> {
+  const firstDay = initialDate ?? (await firstActivationDay(request))
   const preview = await request.post('/api/pay_cycle_config/activation/preview', {
     data: { initial_date: firstDay },
   })
