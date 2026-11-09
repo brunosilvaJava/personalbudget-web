@@ -3,6 +3,7 @@ import {
   CalendarClock,
   ChartLine,
   Ellipsis,
+  HandCoins,
   House,
   Wallet,
   type LucideIcon,
@@ -28,4 +29,5 @@ export const NAV_ITEMS: readonly NavItem[] = [
 export const MORE_ITEMS: readonly NavItem[] = [
   { to: '/caixa', label: 'Caixa diário', icon: ChartLine },
   { to: '/recorrentes', label: 'Recorrentes', icon: CalendarClock },
+  { to: '/receita', label: 'Receita', icon: HandCoins },
 ]

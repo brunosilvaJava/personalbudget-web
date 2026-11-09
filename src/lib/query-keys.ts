@@ -7,6 +7,7 @@ import type {
   FinancialMovementQuery,
   FixedBillQuery,
   ISODate,
+  IncomeScheduleStatus,
   InstallmentBillQuery,
   UUID,
   YearMonth,
@@ -60,6 +61,14 @@ export const queryKeys = {
   invoicePayments: (invoiceCode: UUID) => ['invoice-payments', invoiceCode] as const,
   cardPurchase: (code: UUID) => ['card-purchase', code] as const,
 
+  incomeSchedules: (statuses: readonly IncomeScheduleStatus[]) =>
+    ['income-schedules', statuses] as const,
+  incomeSchedule: (code: UUID) => ['income-schedule', code] as const,
+  incomeOccurrences: (code: UUID, from: YearMonth, to: YearMonth) =>
+    ['income-occurrences', code, from, to] as const,
+  holidayYears: ['holidays', 'years'] as const,
+  holidayYear: (year: number) => ['holidays', 'year', year] as const,
+
   currentPayCycle: ['pay-cycles', 'current'] as const,
   payCycleByDate: (date: ISODate) => ['pay-cycles', 'date', date] as const,
   payCycle: (code: UUID) => ['pay-cycles', 'code', code] as const,
@@ -104,4 +113,18 @@ export function invalidateFinancial(queryClient: QueryClient): Promise<void> {
   return Promise.all(
     FINANCIAL_ROOT_KEYS.map((key) => queryClient.invalidateQueries({ queryKey: [key] })),
   ).then(() => undefined)
+}
+
+/**
+ * Root keys that an income schedule or a holiday calendar write can change, besides the financial
+ * group: the schedules, the calendar and the pay cycles (a reviewed year refreshes the boundaries).
+ */
+const INCOME_ROOT_KEYS = ['income-schedules', 'income-schedule', 'holidays', 'pay-cycles'] as const
+
+/** Called in the onSuccess of every write to an income schedule or to the holiday calendar. */
+export function invalidateIncome(queryClient: QueryClient): Promise<void> {
+  return Promise.all([
+    invalidateFinancial(queryClient),
+    ...INCOME_ROOT_KEYS.map((key) => queryClient.invalidateQueries({ queryKey: [key] })),
+  ]).then(() => undefined)
 }
