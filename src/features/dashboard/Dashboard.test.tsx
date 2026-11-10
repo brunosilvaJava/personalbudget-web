@@ -47,6 +47,10 @@ function day(
       pending_total_expense: 0,
       closing: projected,
     },
+    pass_through_in: 0,
+    pass_through_out: 0,
+    pending_pass_through_in: 0,
+    pending_pass_through_out: 0,
   }
 }
 

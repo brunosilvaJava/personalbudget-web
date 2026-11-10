@@ -6,6 +6,8 @@ import {
   type CardInvoiceQuery,
   type CardInvoiceResponse,
   type CardInvoiceSummaryResponse,
+  type CardPurchaseBatchLineResponse,
+  type CardPurchaseBatchRequest,
   type CardPurchaseQuery,
   type CardPurchaseRequest,
   type CardPurchaseResponse,
@@ -111,4 +113,15 @@ export function updatePurchase(
 
 export function deletePurchase(code: UUID): Promise<void> {
   return request(`${purchases}/${code}`, { method: 'DELETE' })
+}
+
+/**
+ * Imports a statement. With `dry_run` nothing is written and every line comes back with its status;
+ * without it the import is all or nothing (400 with the lines in error, 409 for a possible duplicate
+ * that was not accepted).
+ */
+export function importPurchases(
+  body: CardPurchaseBatchRequest,
+): Promise<CardPurchaseBatchLineResponse[]> {
+  return request(`${purchases}/batch`, { method: 'POST', body })
 }

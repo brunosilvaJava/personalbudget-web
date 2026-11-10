@@ -30,6 +30,12 @@
  * Everything is snake_case: request and response bodies, Paged* wrappers and query params.
  * The goal is to generate these types from /v3/api-docs with openapi-typescript and diff them in CI.
  *
+ * ADDED on 2026-11-10 (back PRs #113 to #116, merged): holders and plastics of a credit card, third
+ * parties (default third party on the card and on the plastic, the third party of a purchase),
+ * receivables and their receipts and write-off, batch import of card purchases and `first_installment`,
+ * pass-through lines on the daily balance and `receivables` on the cash forecast. All additive, read
+ * from the controllers and DTO records of back `master` at 5588206.
+ *
  * Out of the contract: `/util/*` exists only with the Spring profile `local` and is hidden from
  * the OpenAPI docs.
  */
@@ -84,6 +90,33 @@ export type CreditCardStatus = (typeof CREDIT_CARD_STATUSES)[number]
 /** Derived, never stored: OPEN before closing_date, CLOSED from it on, PAID when every installment is paid. */
 export const CARD_INVOICE_STATES = ['OPEN', 'CLOSED', 'PAID'] as const
 export type CardInvoiceState = (typeof CARD_INVOICE_STATES)[number]
+
+/** Who is on a card. Every card has exactly one TITULAR, created with the card, never inactivated. */
+export const CREDIT_CARD_HOLDER_KINDS = ['TITULAR', 'ADICIONAL'] as const
+export type CreditCardHolderKind = (typeof CREDIT_CARD_HOLDER_KINDS)[number]
+export const CREDIT_CARD_HOLDER_STATUSES = ['ACTIVE', 'INACTIVE'] as const
+export type CreditCardHolderStatus = (typeof CREDIT_CARD_HOLDER_STATUSES)[number]
+
+export const CREDIT_CARD_PLASTIC_KINDS = ['PHYSICAL', 'VIRTUAL', 'UNKNOWN'] as const
+export type CreditCardPlasticKind = (typeof CREDIT_CARD_PLASTIC_KINDS)[number]
+/** REPLACED still shows on old installments and is accepted on a purchase; INACTIVE is refused (409). */
+export const CREDIT_CARD_PLASTIC_STATUSES = ['ACTIVE', 'REPLACED', 'INACTIVE'] as const
+export type CreditCardPlasticStatus = (typeof CREDIT_CARD_PLASTIC_STATUSES)[number]
+
+export const THIRD_PARTY_STATUSES = ['ACTIVE', 'INACTIVE'] as const
+export type ThirdPartyStatus = (typeof THIRD_PARTY_STATUSES)[number]
+
+/** Derived. WRITTEN_OFF: something was written off and nothing is left to receive. */
+export const RECEIVABLE_STATUSES = ['PENDING', 'LATE', 'PAID_OUT', 'WRITTEN_OFF'] as const
+export type ReceivableStatus = (typeof RECEIVABLE_STATUSES)[number]
+
+export const CARD_PURCHASE_BATCH_STATUSES = [
+  'NEW',
+  'DUPLICATE',
+  'POSSIBLE_DUPLICATE',
+  'ERROR',
+] as const
+export type CardPurchaseBatchStatus = (typeof CARD_PURCHASE_BATCH_STATUSES)[number]
 
 /** Category status (#67). Inactive categories leave the pick lists but keep their history. */
 export const CATEGORY_STATUSES = ['ACTIVE', 'INACTIVE'] as const
@@ -298,6 +331,13 @@ export interface FinancialMovementResponse {
   card_purchase_code: UUID | null
   card_invoice_code: UUID | null
   installment_number: number | null
+  /**
+   * (#113) Set on an installment of a purchase that belongs to a third party, and on its receivable.
+   * Cash that crosses the accounts but is neither own consumption nor income.
+   */
+  third_party_code: UUID | null
+  /** (#114) Set only on a receivable: the code of the card installment it was generated from */
+  receivable_source_code: UUID | null
 }
 
 export const FINANCIAL_MOVEMENT_SORT_FIELDS = [
@@ -322,8 +362,12 @@ export interface FinancialMovementQuery {
   status?: FinancialMovementStatus[]
   /** repeated param (#68): category_code=...&category_code=... */
   category_code?: UUID[]
-  /** true returns only movements without category; ignored when category_code is sent */
+  /** true returns only movements without category; ignored when category_code is sent. Receivables have no category and are not listed here */
   without_category?: boolean // default false
+  /** (#113) only movements of this third party (installments and receivables); 400 together with own_only */
+  third_party_code?: UUID
+  /** (#113) true returns only own movements (no third party) */
+  own_only?: boolean // default false
   /** REQUIRED, filters movement_date */
   start_date: ISODate
   /** REQUIRED, inclusive */
@@ -801,6 +845,8 @@ export interface CreditCardRequest {
   credit_limit?: Money
   /** ACTIVE account that pays the invoices by default */
   default_account_code?: UUID
+  /** (#113) ACTIVE third party whose are the purchases of this card unless a plastic or the purchase says otherwise */
+  default_third_party_code?: UUID
 }
 
 /**
@@ -813,6 +859,9 @@ export interface CreditCardUpdateRequest {
   due_day?: number
   credit_limit?: Money
   default_account_code?: UUID
+  default_third_party_code?: UUID
+  /** true removes the default third party; 400 together with default_third_party_code */
+  clear_default_third_party?: boolean
 }
 
 export interface CreditCardResponse {
@@ -822,6 +871,7 @@ export interface CreditCardResponse {
   due_day: number
   credit_limit: Money | null
   default_account_code: UUID | null
+  default_third_party_code: UUID | null
   status: CreditCardStatus
 }
 
@@ -860,6 +910,16 @@ export interface CardPurchaseRequest {
   /** the value of EACH installment (not the purchase total); > 0, up to 8 integer digits */
   installment_amount: Money
   category_code?: UUID | null
+  /** (#113) the holder who used the card; the TITULAR when neither this nor card_last_digits is sent */
+  card_holder_code?: UUID
+  /** (#113) 4 digits of one of the card's plastics; its holder is the holder of the purchase */
+  card_last_digits?: string
+  /** (#113) whose the purchase is; wins over the default of the plastic and of the card */
+  third_party_code?: UUID
+  /** (#113) true forces an own purchase, ignoring the defaults; 400 together with third_party_code */
+  own_expense?: boolean
+  /** (#115) 1..60: the purchase starts at this installment (a statement showing 3/10); default 1 */
+  first_installment?: number
 }
 
 /**
@@ -872,6 +932,14 @@ export interface CardPurchaseUpdateRequest {
   installments?: number
   installment_amount?: Money
   category_code?: UUID
+  card_holder_code?: UUID
+  card_last_digits?: string
+  /**
+   * Without third_party_code and own_expense the third party does NOT change (the defaults are not
+   * applied again). 409 when the cycle is closed or an installment's receivable already received money.
+   */
+  third_party_code?: UUID
+  own_expense?: boolean
 }
 
 /** One installment of a purchase, as seen from the purchase or from the invoice. */
@@ -905,6 +973,13 @@ export interface CardPurchaseResponse {
   total_amount: Money
   category_code: UUID | null
   installment_list: CardInstallmentResponse[]
+  card_holder_code: UUID | null
+  card_holder_name: string | null
+  card_last_digits: string | null
+  third_party_code: UUID | null
+  third_party_name: string | null
+  /** (#115) 1 unless the purchase was created in the middle of a plan */
+  first_installment: number
 }
 
 /**
@@ -931,6 +1006,19 @@ export interface CardInvoiceSummaryResponse {
   state: CardInvoiceState
   total_amount: Money
   paid_amount: Money
+  /** (#113) the total by holder; the sum is total_amount */
+  holder_total_list: CardInvoiceHolderTotalResponse[]
+  /** (#113) the part of total_amount that is yours */
+  own_total_amount: Money
+  /** (#113) the part of total_amount that belongs to third parties */
+  third_party_total_amount: Money
+}
+
+export interface CardInvoiceHolderTotalResponse {
+  holder_code: UUID
+  holder_name: string
+  kind: CreditCardHolderKind
+  total_amount: Money
 }
 
 /** GET /card_invoice/{code}: the summary plus its installments. */
@@ -1068,6 +1156,8 @@ export interface CashForecastResponse {
   /** free_after_reserves < 0. Independent of negative_cash_alert. */
   insufficient_budget_alert: boolean
   projection_incomplete: boolean
+  /** (#114) open receivables of third parties until the horizon; added to projected_cash, kept out of expected_income */
+  receivables: Money
 }
 
 // ───────────────────────── /income_schedule (#74, #80) ─────────────────────────
@@ -1624,6 +1714,16 @@ export interface DailyBalance {
     pending_total_expense: Money
     closing: Money
   }
+  /**
+   * (#113) Cash of third parties that crosses the accounts: not revenue, not expense. closing and
+   * projected.closing include it (closing = opening + revenue + expense + pass-through).
+   */
+  pass_through_in: Money
+  /** negative */
+  pass_through_out: Money
+  pending_pass_through_in: Money
+  /** negative */
+  pending_pass_through_out: Money
 }
 
 // ───────────────────────── /dashboard ─────────────────────────
@@ -1810,6 +1910,7 @@ export const endpoints = {
   creditCard: '/credit_card',
   cardPurchase: '/card_purchase',
   cardInvoice: '/card_invoice',
+  thirdParty: '/third_party',
   envelope: '/envelope',
   forecast: '/forecast',
   incomeSchedule: '/income_schedule',
@@ -1820,6 +1921,190 @@ export const endpoints = {
   dashboard: '/dashboard',
   health: '/actuator/health',
 } as const
+
+// ───────────────────────── Holders and plastics of a card (#113) ─────────────────────────
+
+/**
+ * GET/POST /credit_card/{code}/holder. The TITULAR already exists (named "Titular", renameable); a
+ * POST creates an ADICIONAL. 409: name already used on the card.
+ */
+export interface CreditCardHolderRequest {
+  /** 1..80 chars */
+  name: string
+}
+
+/** PATCH /credit_card/{code}/holder/{holder_code}. PATCH .../inactivate and .../activate refuse the TITULAR. */
+export interface CreditCardHolderUpdateRequest {
+  name?: string
+}
+
+export interface CreditCardHolderResponse {
+  code: UUID
+  card_code: UUID
+  name: string
+  kind: CreditCardHolderKind
+  status: CreditCardHolderStatus
+}
+
+/** POST /credit_card/{code}/plastic. 409: the 4 digits are already a plastic of this card. */
+export interface CreditCardPlasticRequest {
+  holder_code: UUID
+  /** exactly 4 digits */
+  last_digits: string
+  /** default UNKNOWN */
+  kind?: CreditCardPlasticKind
+}
+
+/** PATCH /credit_card/{code}/plastic/{plastic_code}: every field optional. */
+export interface CreditCardPlasticUpdateRequest {
+  kind?: CreditCardPlasticKind
+  status?: CreditCardPlasticStatus
+  /** the purchases made with this plastic belong to this third party unless the purchase says otherwise */
+  default_third_party_code?: UUID
+  /** true removes the default third party; 400 together with default_third_party_code */
+  clear_default_third_party?: boolean
+}
+
+export interface CreditCardPlasticResponse {
+  code: UUID
+  card_code: UUID
+  holder_code: UUID
+  holder_name: string
+  last_digits: string
+  kind: CreditCardPlasticKind
+  status: CreditCardPlasticStatus
+  default_third_party_code: UUID | null
+}
+
+// ───────────────────────── /third_party (#113, #114, #116) ─────────────────────────
+
+/** POST /third_party. 409: name already used. */
+export interface ThirdPartyRequest {
+  /** 1..80 chars */
+  name: string
+}
+
+export interface ThirdPartyUpdateRequest {
+  name?: string
+}
+
+/** GET /third_party[?status=...]: a plain array. Without `status`, only ACTIVE. */
+export interface ThirdPartyQuery {
+  status?: ThirdPartyStatus[]
+}
+
+/**
+ * PATCH .../inactivate answers 409 while the third party has a receivable with something left to
+ * receive. open_amount: what is left to receive; late_amount: the part already past due.
+ */
+export interface ThirdPartyResponse {
+  code: UUID
+  name: string
+  status: ThirdPartyStatus
+  open_amount: Money
+  late_amount: Money
+  open_count: number
+}
+
+/**
+ * What a third party owes for the installments of the purchases that are theirs: one receivable per
+ * installment, due when the installment is. Not income: it never shows in the consumption or income
+ * reports, and its receipts are pass-through cash.
+ */
+export interface ReceivableResponse {
+  code: UUID
+  third_party_code: UUID
+  status: ReceivableStatus
+  amount: Money
+  received_amount: Money
+  written_off_amount: Money
+  remaining_amount: Money
+  due_date: ISODate
+  purchase_code: UUID
+  installment_number: number
+  invoice_code: UUID
+  /** e.g. "A receber: Geladeira (1/3)" */
+  description: string
+}
+
+/** PATCH /third_party/{code}/receivables/{receivable_code}. 409: closed cycle or money already received. */
+export interface ReceivableUpdateRequest {
+  due_date: ISODate
+}
+
+/**
+ * POST /third_party/{code}/receipts: the amount is spread from the oldest receivable to the newest, one
+ * settlement each, in one transaction; the last one may be partial. Allowed in a closed cycle, like
+ * paying. Answers the receivables touched. 409: the amount is above what is left to receive.
+ */
+export interface ReceiptRequest {
+  /** > 0, up to 2 decimals */
+  amount: Money
+  effective_date: ISODate
+  /** the default account when omitted */
+  account_code?: UUID
+}
+
+/**
+ * POST /third_party/{code}/receivables/{receivable_code}/write_off: gives up on the WHOLE open balance.
+ * No cash moves: it becomes an own expense of the competence of effective_date, in the fixed category
+ * "Perdas com terceiros". To forgive only part of it, receive the rest first.
+ * 409: the date belongs to a closed cycle, or nothing is left to receive.
+ */
+export interface ReceivableWriteOffRequest {
+  effective_date: ISODate
+}
+
+// ───────────────────────── POST /card_purchase/batch (#115) ─────────────────────────
+
+/** One line of a statement; becomes a purchase exactly as POST /card_purchase would create it. */
+export interface CardPurchaseBatchItemRequest {
+  /** up to 100 chars */
+  description: string
+  purchase_date: ISODate
+  installments: number
+  /** 1..installments; the plan starts here (a statement showing 3/10) */
+  first_installment?: number
+  /** the value of EACH installment */
+  installment_amount: Money
+  category_code?: UUID
+  card_last_digits?: string
+  card_holder_code?: UUID
+  third_party_code?: UUID
+  own_expense?: boolean
+  /** true lets a POSSIBLE_DUPLICATE line through */
+  accept_duplicate?: boolean
+}
+
+/**
+ * 1..300 items. With dry_run true nothing is written and every line comes back with its status; without
+ * it the import is all or nothing (a line in error, or any rule of a single purchase, cancels the
+ * batch). 400: lines in error, as items[n].field. 409: a possible duplicate that was not accepted.
+ */
+export interface CardPurchaseBatchRequest {
+  credit_card_code: UUID
+  dry_run?: boolean
+  items: CardPurchaseBatchItemRequest[]
+}
+
+/** One entry per line, in the order received. */
+export interface CardPurchaseBatchLineResponse {
+  /**
+   * NEW; DUPLICATE: already imported, skipped; POSSIBLE_DUPLICATE: looks like a purchase of the card
+   * (see matches); ERROR: see errors.
+   */
+  status: CardPurchaseBatchStatus
+  /** field -> message; empty unless status is ERROR */
+  errors: Record<string, string>
+  import_key: string
+  /** first invoice the line falls in */
+  invoice_reference_month: YearMonth | null
+  due_date: ISODate | null
+  holder_code: UUID | null
+  third_party_code: UUID | null
+  /** codes of the existing purchases a POSSIBLE_DUPLICATE looks like */
+  matches: UUID[]
+}
 
 // ───────────────────────── Helpers ─────────────────────────
 
