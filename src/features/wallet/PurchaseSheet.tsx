@@ -37,6 +37,7 @@ import { applyApiErrors, errorMessage } from '@/lib/api-errors'
 import { formatDate, formatMoney, formatShortDate, formatShortMonth } from '@/lib/format'
 import { fromCents } from '@/lib/money'
 import { useOnline } from '@/lib/online'
+import { usePlastics } from './holderQueries'
 import {
   useActiveCards,
   useCardLookup,
@@ -84,6 +85,9 @@ export function PurchaseSheet({ open, onOpenChange, purchaseCode, cardCode }: Pu
     </Sheet>
   )
 }
+
+/** Radix Select does not accept an empty value, so "no plastic" gets a stand-in. */
+const NO_PLASTIC = '__titular__'
 
 type Mode = 'view' | 'edit' | 'create'
 
@@ -189,6 +193,10 @@ function PurchaseView({
             : `${purchase.installments}x de ${formatMoney(purchase.installment_amount)}`}{' '}
           · {cards.get(purchase.card_code)?.name ?? 'Cartão'} · {formatDate(purchase.purchase_date)}
           {category && ` · ${category.name}`}
+          {purchase.card_holder_name &&
+            ` · ${purchase.card_holder_name}${
+              purchase.card_last_digits ? ` (final ${purchase.card_last_digits})` : ''
+            }`}
         </p>
       </SheetHeader>
       <SheetBody>
@@ -277,7 +285,7 @@ function PurchaseForm({
   const cards = useActiveCards()
   const pending = create.isPending || update.isPending
   const [formError, setFormError] = useState<string | null>(null)
-  const { register, control, handleSubmit, setError, formState } = useForm<
+  const { register, control, handleSubmit, setError, setValue, formState } = useForm<
     PurchaseFormInput,
     unknown,
     PurchaseFormValues
@@ -285,6 +293,11 @@ function PurchaseForm({
     resolver: zodResolver(purchaseSchema),
     defaultValues: purchaseDefaults(purchase, cardCode ?? cards.data?.[0]?.code),
   })
+  const cardChosen = useWatch({ control, name: 'card_code' })
+  const plastics = usePlastics(cardChosen || null)
+  const usablePlastics = (plastics.data ?? []).filter(
+    (plastic) => plastic.status === 'ACTIVE' || plastic.last_digits === purchase?.card_last_digits,
+  )
   const installments = useWatch({ control, name: 'installments' })
   const amount = useWatch({ control, name: 'installment_amount' })
   const total =
@@ -320,7 +333,13 @@ function PurchaseForm({
             render={({ field, fieldState }) => (
               <Field id="purchase-card" label="Cartão" error={fieldState.error?.message}>
                 {(aria) => (
-                  <Select value={field.value} onValueChange={field.onChange}>
+                  <Select
+                    value={field.value}
+                    onValueChange={(value) => {
+                      field.onChange(value)
+                      setValue('card_last_digits', null)
+                    }}
+                  >
                     <SelectTrigger {...aria}>
                       <SelectValue
                         placeholder={cards.isPending ? 'Carregando…' : 'Escolha o cartão'}
@@ -428,6 +447,41 @@ function PurchaseForm({
             </Field>
           )}
         />
+        {usablePlastics.length > 0 && (
+          <Controller
+            control={control}
+            name="card_last_digits"
+            render={({ field, fieldState }) => (
+              <Field
+                id="purchase-plastic"
+                label="Quem usou o cartão (opcional)"
+                error={fieldState.error?.message}
+                description="Sem escolha, a compra é do titular."
+              >
+                {(aria) => (
+                  <Select
+                    value={field.value ?? NO_PLASTIC}
+                    onValueChange={(value) => field.onChange(value === NO_PLASTIC ? null : value)}
+                  >
+                    <SelectTrigger {...aria}>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {!purchase?.card_last_digits && (
+                        <SelectItem value={NO_PLASTIC}>Titular (padrão)</SelectItem>
+                      )}
+                      {usablePlastics.map((plastic) => (
+                        <SelectItem key={plastic.code} value={plastic.last_digits}>
+                          final {plastic.last_digits} · {plastic.holder_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </Field>
+            )}
+          />
+        )}
         {formError && <FormAlert message={formError} />}
       </SheetBody>
       <SheetFooter className="sticky bottom-0 border-t bg-background">

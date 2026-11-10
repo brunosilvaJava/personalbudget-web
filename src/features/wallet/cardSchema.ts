@@ -93,6 +93,8 @@ export const purchaseSchema = z.object({
   /** cents, the value of EACH installment */
   installment_amount: amountSchema,
   category_code: z.string().nullable(),
+  /** the last 4 digits of the plastic that made the purchase; empty = the card's TITULAR */
+  card_last_digits: z.string().nullable(),
 })
 
 export type PurchaseFormInput = z.input<typeof purchaseSchema>
@@ -104,6 +106,7 @@ export const PURCHASE_FIELDS = [
   'installments',
   'installment_amount',
   'category_code',
+  'card_last_digits',
 ] as const
 
 export function purchaseDefaults(
@@ -118,6 +121,7 @@ export function purchaseDefaults(
       installments: purchase.installments,
       installment_amount: toCents(purchase.installment_amount),
       category_code: purchase.category_code,
+      card_last_digits: purchase.card_last_digits,
     }
   }
   return {
@@ -127,6 +131,7 @@ export function purchaseDefaults(
     installments: 1,
     installment_amount: null as unknown as number,
     category_code: null,
+    card_last_digits: null,
   }
 }
 
@@ -139,6 +144,7 @@ export function toPurchaseRequest(values: PurchaseFormValues): CardPurchaseReque
     installment_amount: fromCents(values.installment_amount),
   }
   if (values.category_code) body.category_code = values.category_code
+  if (values.card_last_digits) body.card_last_digits = values.card_last_digits
   return body
 }
 
@@ -155,6 +161,10 @@ export function toPurchaseUpdate(
   }
   if (values.category_code && values.category_code !== purchase.category_code) {
     body.category_code = values.category_code
+  }
+  // the back cannot take the plastic away from a purchase, only change it
+  if (values.card_last_digits && values.card_last_digits !== purchase.card_last_digits) {
+    body.card_last_digits = values.card_last_digits
   }
   return body
 }

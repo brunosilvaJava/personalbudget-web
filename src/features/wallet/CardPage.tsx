@@ -15,6 +15,7 @@ import { errorMessage } from '@/lib/api-errors'
 import { formatMoney, formatShortDate, formatShortMonth } from '@/lib/format'
 import { useOnline } from '@/lib/online'
 import { CardFormSheet } from './CardFormSheet'
+import { CardHoldersSection } from './CardHoldersSection'
 import { useCard, useCardInvoices, useCardLimit, useSetCardActive } from './cardQueries'
 import { INVOICE_STATE_LABEL } from './labels'
 import { LimitBar } from './LimitBar'
@@ -93,6 +94,8 @@ function CardView({ card }: { card: CreditCardResponse }) {
         </Button>
       </div>
       {error && <FormAlert message={error} />}
+
+      <CardHoldersSection card={card} />
 
       <section aria-labelledby="invoices-title" className="flex flex-col gap-2">
         <h2 id="invoices-title" className="font-medium">
