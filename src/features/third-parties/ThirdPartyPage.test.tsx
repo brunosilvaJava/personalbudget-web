@@ -3,7 +3,12 @@ import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import type { ReceiptRequest, ReceivableResponse, ReceivableUpdateRequest } from '@/api/contracts'
+import type {
+  ReceiptRequest,
+  ReceivableResponse,
+  ReceivableUpdateRequest,
+  ReceivableWriteOffRequest,
+} from '@/api/contracts'
 import { mockCommonApi } from '@/test/api'
 import { accounts, thirdParties } from '@/test/fixtures'
 import { renderApp } from '@/test/render'
@@ -51,11 +56,13 @@ function mockApi(
     receivables?: ReceivableResponse[]
     receiptAnswer?: Response
     dueAnswer?: Response
+    writeOffAnswer?: Response
   } = {},
 ) {
   const calls = {
     receipts: [] as ReceiptRequest[],
     dueDates: [] as { code: string; body: ReceivableUpdateRequest }[],
+    writeOffs: [] as { code: string; body: ReceivableWriteOffRequest }[],
   }
   mockCommonApi({
     accounts: [accounts.main, accounts.wallet],
@@ -70,6 +77,19 @@ function mockApi(
       calls.receipts.push((await request.json()) as ReceiptRequest)
       return options.receiptAnswer ?? HttpResponse.json([PARTLY], { status: 201 })
     }),
+    http.post(
+      '/api/third_party/:code/receivables/:receivable/write_off',
+      async ({ request, params }) => {
+        calls.writeOffs.push({
+          code: String(params.receivable),
+          body: (await request.json()) as ReceivableWriteOffRequest,
+        })
+        return (
+          options.writeOffAnswer ??
+          HttpResponse.json({ ...PARTLY, status: 'WRITTEN_OFF', remaining_amount: 0 })
+        )
+      },
+    ),
     http.patch('/api/third_party/:code/receivables/:receivable', async ({ request, params }) => {
       calls.dueDates.push({
         code: String(params.receivable),
@@ -218,5 +238,56 @@ describe('Terceiro: a receber', () => {
     await userEvent.click(within(sheet).getByRole('button', { name: 'Salvar' }))
 
     expect(await within(sheet).findByText('O ciclo está fechado.')).toBeInTheDocument()
+  })
+
+  it('should write off the whole open balance of a receivable after explaining what it does', async () => {
+    const calls = mockApi()
+    renderApp('/carteira/terceiros/t-mae')
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Dar baixa em A receber: Mercado (1/1)' }),
+    )
+    const sheet = await screen.findByRole('dialog', { name: 'Dar baixa' })
+    expect(within(sheet).getByText(/deixa de dever R\$\s100,00/)).toBeInTheDocument()
+    expect(within(sheet).getByText(/Perdas com terceiros/)).toBeInTheDocument()
+    expect(within(sheet).getByText(/não mexe em nenhuma conta/)).toBeInTheDocument()
+    await userEvent.click(within(sheet).getByRole('button', { name: /Dar baixa em R\$\s100,00/ }))
+
+    await waitFor(() =>
+      expect(calls.writeOffs).toEqual([{ code: 'r0', body: { effective_date: '2026-11-10' } }]),
+    )
+  })
+
+  it('should show why the back refused the write-off', async () => {
+    mockApi({
+      writeOffAnswer: HttpResponse.json(
+        { message: 'A data pertence a um ciclo fechado.' },
+        { status: 409 },
+      ),
+    })
+    renderApp('/carteira/terceiros/t-mae')
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Dar baixa em A receber: Mercado (1/1)' }),
+    )
+    const sheet = await screen.findByRole('dialog', { name: 'Dar baixa' })
+    await userEvent.click(within(sheet).getByRole('button', { name: /Dar baixa em/ }))
+
+    expect(
+      await within(sheet).findByText('A data pertence a um ciclo fechado.'),
+    ).toBeInTheDocument()
+  })
+
+  it('should not offer the write-off for what is already settled', async () => {
+    mockApi({ receivables: [DONE, NEXT] })
+    renderApp('/carteira/terceiros/t-mae')
+
+    await screen.findByText('A receber: Livro (1/1)')
+    expect(
+      screen.queryByRole('button', { name: 'Dar baixa em A receber: Livro (1/1)' }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: 'Dar baixa em A receber: Farmácia (1/2)' }),
+    ).toBeInTheDocument()
   })
 })

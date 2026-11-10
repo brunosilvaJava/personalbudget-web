@@ -15,6 +15,7 @@ import { useOnline } from '@/lib/online'
 import { DueDateSheet } from './DueDateSheet'
 import { useReceivables, useThirdParty } from './receivableQueries'
 import { ReceiptSheet } from './ReceiptSheet'
+import { WriteOffSheet } from './WriteOffSheet'
 
 const STATUS_LABEL: Record<ReceivableStatus, string> = {
   PENDING: 'A receber',
@@ -55,6 +56,7 @@ function ThirdPartyView({ thirdParty }: { thirdParty: ThirdPartyResponse }) {
   const receivables = useReceivables(thirdParty.code)
   const [receiving, setReceiving] = useState(false)
   const [dueOf, setDueOf] = useState<ReceivableResponse | null>(null)
+  const [writeOffOf, setWriteOffOf] = useState<ReceivableResponse | null>(null)
   const open = (receivables.data ?? []).filter(isOpen)
   const remaining = fromCents(
     open.reduce((sum, receivable) => sum + toCents(receivable.remaining_amount), 0),
@@ -135,15 +137,27 @@ function ThirdPartyView({ thirdParty }: { thirdParty: ThirdPartyResponse }) {
                   )}
                 </div>
                 {isOpen(receivable) && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    aria-label={`Alterar vencimento de ${receivable.description}`}
-                    disabled={!online}
-                    onClick={() => setDueOf(receivable)}
-                  >
-                    Vencimento
-                  </Button>
+                  <div className="flex flex-col items-end gap-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      aria-label={`Alterar vencimento de ${receivable.description}`}
+                      disabled={!online}
+                      onClick={() => setDueOf(receivable)}
+                    >
+                      Vencimento
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-destructive hover:text-destructive"
+                      aria-label={`Dar baixa em ${receivable.description}`}
+                      disabled={!online}
+                      onClick={() => setWriteOffOf(receivable)}
+                    >
+                      Dar baixa
+                    </Button>
+                  </div>
                 )}
               </li>
             ))}
@@ -156,6 +170,12 @@ function ThirdPartyView({ thirdParty }: { thirdParty: ThirdPartyResponse }) {
         onOpenChange={setReceiving}
         thirdParty={thirdParty}
         remaining={remaining}
+      />
+      <WriteOffSheet
+        open={writeOffOf !== null}
+        onOpenChange={(next) => !next && setWriteOffOf(null)}
+        receivable={writeOffOf}
+        thirdPartyName={thirdParty.name}
       />
       <DueDateSheet
         open={dueOf !== null}

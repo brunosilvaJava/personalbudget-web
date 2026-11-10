@@ -1,11 +1,17 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
-import type { ReceiptRequest, ReceivableUpdateRequest, UUID } from '@/api/contracts'
+import type {
+  ReceiptRequest,
+  ReceivableUpdateRequest,
+  ReceivableWriteOffRequest,
+  UUID,
+} from '@/api/contracts'
 import {
   getThirdParty,
   listReceivables,
   receive,
   updateReceivableDueDate,
+  writeOffReceivable,
 } from '@/api/thirdParties'
 import { invalidateFinancial, queryKeys } from '@/lib/query-keys'
 
@@ -47,5 +53,19 @@ export function useUpdateReceivableDueDate() {
       receivableCode: UUID
       body: ReceivableUpdateRequest
     }) => updateReceivableDueDate(thirdPartyCode, receivableCode, body),
+  )
+}
+
+export function useWriteOff() {
+  return useReceivableMutation(
+    ({
+      thirdPartyCode,
+      receivableCode,
+      body,
+    }: {
+      thirdPartyCode: UUID
+      receivableCode: UUID
+      body: ReceivableWriteOffRequest
+    }) => writeOffReceivable(thirdPartyCode, receivableCode, body),
   )
 }

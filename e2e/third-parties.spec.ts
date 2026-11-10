@@ -125,3 +125,52 @@ test('registers a receipt from the third party: the account gets the money and t
   expect(receivables[0]?.received_amount).toBe(50)
   expect(receivables[0]?.remaining_amount).toBe(70)
 })
+
+test('writes off what a third party owes: the receivable closes and no account moves', async ({
+  page,
+  request,
+}) => {
+  const partyName = unique('Terceiro')
+  const cardName = unique('Cartão Baixa')
+  const purchase = unique('Presente')
+
+  await page.goto('/carteira/terceiros')
+  await page.getByRole('button', { name: 'Novo terceiro' }).click()
+  const partyForm = page.getByRole('dialog', { name: 'Novo terceiro' })
+  await partyForm.getByLabel('Nome', { exact: true }).fill(partyName)
+  await partyForm.getByRole('button', { name: 'Cadastrar terceiro' }).click()
+  await expect(page.getByText(partyName)).toBeVisible()
+
+  await page.goto('/carteira/cartoes')
+  await page.getByRole('button', { name: 'Novo cartão' }).click()
+  const card = page.getByRole('dialog', { name: 'Novo cartão' })
+  await card.getByLabel('Nome', { exact: true }).fill(cardName)
+  await card.getByLabel('Dia do fechamento').fill('10')
+  await card.getByLabel('Dia do vencimento').fill('20')
+  await card.getByRole('combobox', { name: /Terceiro padrão/ }).click()
+  await page.getByRole('option', { name: partyName }).click()
+  await card.getByRole('button', { name: 'Criar cartão' }).click()
+  await page.getByRole('link', { name: new RegExp(cardName) }).click()
+  await page.getByRole('button', { name: 'Nova compra' }).click()
+  const form = page.getByRole('dialog', { name: 'Compra no cartão' })
+  await form.getByLabel('Descrição', { exact: true }).fill(purchase)
+  await form.getByLabel('Valor da parcela', { exact: true }).fill('90')
+  await form.getByRole('button', { name: 'Lançar compra' }).click()
+  await expect(page.getByRole('dialog', { name: purchase })).toBeVisible()
+  await page.keyboard.press('Escape')
+
+  await page.goto('/carteira/terceiros')
+  await page.getByRole('link', { name: new RegExp(partyName) }).click()
+  await page.getByRole('button', { name: /^Dar baixa em / }).click()
+  const sheet = page.getByRole('dialog', { name: 'Dar baixa' })
+  await expect(sheet.getByText(/Perdas com terceiros/)).toBeVisible()
+  await sheet.getByRole('button', { name: /Dar baixa em R\$\s90,00/ }).click()
+  await expect(page.getByText(/Baixa de R\$\s90,00 registrada/)).toBeVisible()
+
+  const parties = await apiGet<{ code: string; name: string }[]>(request, '/third_party')
+  const party = parties.find((candidate) => candidate.name === partyName)
+  const receivables = await apiGet<Receivable[]>(request, `/third_party/${party!.code}/receivables`)
+  expect(receivables[0]?.status).toBe('WRITTEN_OFF')
+  expect(receivables[0]?.remaining_amount).toBe(0)
+  await expect(page.getByText('Baixado')).toBeVisible()
+})
