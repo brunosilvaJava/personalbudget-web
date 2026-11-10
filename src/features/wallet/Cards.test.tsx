@@ -43,6 +43,12 @@ const purchase: CardPurchaseResponse = {
   installment_amount: 1000,
   total_amount: 3000,
   category_code: null,
+  card_holder_code: null,
+  card_holder_name: null,
+  card_last_digits: null,
+  third_party_code: null,
+  third_party_name: null,
+  first_installment: 1,
   installment_list: [
     installment(),
     installment({
@@ -69,6 +75,9 @@ const invoice: CardInvoiceResponse = {
   state: 'CLOSED',
   total_amount: 1250,
   paid_amount: 0,
+  holder_total_list: [],
+  own_total_amount: 1250,
+  third_party_total_amount: 0,
   installments: [
     installment(),
     installment({

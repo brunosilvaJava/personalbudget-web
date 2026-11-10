@@ -92,6 +92,8 @@ export function movement(
     card_purchase_code: null,
     card_invoice_code: null,
     installment_number: null,
+    third_party_code: null,
+    receivable_source_code: null,
     ...overrides,
   }
 }
@@ -315,6 +317,7 @@ export const cards = {
     due_day: 10,
     credit_limit: 5000,
     default_account_code: null,
+    default_third_party_code: null,
     status: 'ACTIVE',
   } satisfies CreditCardResponse,
 }
@@ -462,6 +465,7 @@ export function cashForecast(overrides: Partial<CashForecastResponse> = {}): Cas
     negative_cash_alert: false,
     insufficient_budget_alert: false,
     projection_incomplete: false,
+    receivables: 0,
     ...overrides,
   }
 }
