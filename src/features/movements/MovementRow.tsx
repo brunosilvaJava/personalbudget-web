@@ -1,4 +1,4 @@
-import { CreditCard, Repeat } from 'lucide-react'
+import { CreditCard, HandCoins, Repeat, Users } from 'lucide-react'
 
 import type { CategoryResponse, FinancialMovementResponse } from '@/api/contracts'
 import { Amount } from '@/components/domain/Amount'
@@ -11,13 +11,16 @@ import { cardInstallmentLabel, isCardInstallment } from './card'
 interface MovementRowProps {
   movement: FinancialMovementResponse
   category: CategoryResponse | undefined
+  /** the name of movement.third_party_code, when the list knows it */
+  thirdPartyName?: string
   /** opens the movement's actions; without it the row is not interactive */
   onSelect?: (movement: FinancialMovementResponse) => void
 }
 
-export function MovementRow({ movement, category, onSelect }: MovementRowProps) {
+export function MovementRow({ movement, category, thirdPartyName, onSelect }: MovementRowProps) {
   const card = isCardInstallment(movement)
   const recurring = movement.recurrence_bill_code !== null && !card
+  const receivable = movement.receivable_source_code !== null
   const unpaid = movement.status !== 'PAID_OUT'
   const paid = movement.amount_paid ?? 0
   const partial = unpaid && paid > 0
@@ -40,6 +43,19 @@ export function MovementRow({ movement, category, onSelect }: MovementRowProps) 
               <CreditCard aria-hidden />
               {cardInstallmentLabel(movement)}
             </Badge>
+          )}
+          {receivable ? (
+            <Badge variant="secondary">
+              <HandCoins aria-hidden />
+              {thirdPartyName ? `a receber de ${thirdPartyName}` : 'a receber'}
+            </Badge>
+          ) : (
+            movement.third_party_code !== null && (
+              <Badge variant="secondary">
+                <Users aria-hidden />
+                {thirdPartyName ? `de ${thirdPartyName}` : 'de terceiro'}
+              </Badge>
+            )
           )}
           {recurring && (
             <Badge variant="secondary">

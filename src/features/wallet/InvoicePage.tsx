@@ -105,6 +105,39 @@ function InvoiceView({
         <Total label="Falta">{formatMoney(remaining)}</Total>
       </dl>
 
+      {invoice.third_party_total_amount > 0 && (
+        <section aria-labelledby="invoice-split" className="flex flex-col gap-2">
+          <h2 id="invoice-split" className="sr-only">
+            Quanto é seu e quanto é de terceiros
+          </h2>
+          <dl className="grid grid-cols-2 gap-2 rounded-lg border bg-card p-4 text-sm">
+            <Total label="É meu">{formatMoney(invoice.own_total_amount)}</Total>
+            <Total label="É de terceiros">{formatMoney(invoice.third_party_total_amount)}</Total>
+          </dl>
+        </section>
+      )}
+
+      {invoice.holder_total_list.length > 1 && (
+        <section aria-labelledby="invoice-holders" className="flex flex-col gap-2">
+          <h2 id="invoice-holders" className="font-medium">
+            Por titular
+          </h2>
+          <ul className="divide-y overflow-hidden rounded-lg border bg-card">
+            {invoice.holder_total_list.map((holder) => (
+              <li key={holder.holder_code} className="flex items-center gap-3 px-4 py-3">
+                <span className="min-w-0 flex-1 truncate">
+                  {holder.holder_name}
+                  {holder.kind === 'TITULAR' && (
+                    <span className="text-muted-foreground"> · titular</span>
+                  )}
+                </span>
+                <span className="tabular-nums">{formatMoney(holder.total_amount)}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       {invoice.state !== 'PAID' && remaining > 0 && (
         <Button className="h-12 text-base" onClick={() => setPaying(true)} disabled={!online}>
           Pagar fatura · {formatMoney(remaining)}
