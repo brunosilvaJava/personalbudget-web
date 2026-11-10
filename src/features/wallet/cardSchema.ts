@@ -28,6 +28,8 @@ export const cardSchema = z.object({
   /** cents; empty = no limit control */
   credit_limit: z.number().int().positive('O limite precisa ser maior que zero.').nullable(),
   default_account_code: z.string().nullable(),
+  /** whose are the purchases of this card unless a plastic or the purchase says otherwise */
+  default_third_party_code: z.string().nullable(),
 })
 
 export type CardFormInput = z.input<typeof cardSchema>
@@ -38,6 +40,7 @@ export const CARD_FIELDS = [
   'due_day',
   'credit_limit',
   'default_account_code',
+  'default_third_party_code',
 ] as const
 
 export function cardDefaults(card?: CreditCardResponse): CardFormInput {
@@ -47,6 +50,7 @@ export function cardDefaults(card?: CreditCardResponse): CardFormInput {
     due_day: card?.due_day ?? (null as unknown as number),
     credit_limit: card?.credit_limit != null ? toCents(card.credit_limit) : null,
     default_account_code: card?.default_account_code ?? null,
+    default_third_party_code: card?.default_third_party_code ?? null,
   }
 }
 
@@ -58,10 +62,16 @@ export function toCardRequest(values: CardFormValues): CreditCardRequest {
   }
   if (values.credit_limit !== null) body.credit_limit = fromCents(values.credit_limit)
   if (values.default_account_code) body.default_account_code = values.default_account_code
+  if (values.default_third_party_code) {
+    body.default_third_party_code = values.default_third_party_code
+  }
   return body
 }
 
-/** Only what changed. The limit and the default account can be changed but not cleared (back rule). */
+/**
+ * Only what changed. The limit and the default account can be changed but not cleared (back rule);
+ * the default third party can, with its own flag.
+ */
 export function toCardUpdate(
   card: CreditCardResponse,
   values: CardFormValues,
@@ -75,6 +85,13 @@ export function toCardUpdate(
   }
   if (values.default_account_code && values.default_account_code !== card.default_account_code) {
     body.default_account_code = values.default_account_code
+  }
+  if (values.default_third_party_code !== card.default_third_party_code) {
+    if (values.default_third_party_code) {
+      body.default_third_party_code = values.default_third_party_code
+    } else {
+      body.clear_default_third_party = true
+    }
   }
   return body
 }
@@ -95,6 +112,8 @@ export const purchaseSchema = z.object({
   category_code: z.string().nullable(),
   /** the last 4 digits of the plastic that made the purchase; empty = the card's TITULAR */
   card_last_digits: z.string().nullable(),
+  /** OWNER_DEFAULT, OWNER_OWN or the code of a third party */
+  owner: z.string(),
 })
 
 export type PurchaseFormInput = z.input<typeof purchaseSchema>
@@ -107,7 +126,13 @@ export const PURCHASE_FIELDS = [
   'installment_amount',
   'category_code',
   'card_last_digits',
+  'owner',
 ] as const
+
+/** The purchase keeps the third party of the plastic or of the card (nothing is sent). */
+export const OWNER_DEFAULT = '__default__'
+/** The purchase is mine, whatever the defaults say (`own_expense`). */
+export const OWNER_OWN = '__own__'
 
 export function purchaseDefaults(
   purchase?: CardPurchaseResponse,
@@ -122,6 +147,7 @@ export function purchaseDefaults(
       installment_amount: toCents(purchase.installment_amount),
       category_code: purchase.category_code,
       card_last_digits: purchase.card_last_digits,
+      owner: purchase.third_party_code ?? OWNER_DEFAULT,
     }
   }
   return {
@@ -132,6 +158,7 @@ export function purchaseDefaults(
     installment_amount: null as unknown as number,
     category_code: null,
     card_last_digits: null,
+    owner: OWNER_DEFAULT,
   }
 }
 
@@ -145,6 +172,8 @@ export function toPurchaseRequest(values: PurchaseFormValues): CardPurchaseReque
   }
   if (values.category_code) body.category_code = values.category_code
   if (values.card_last_digits) body.card_last_digits = values.card_last_digits
+  if (values.owner === OWNER_OWN) body.own_expense = true
+  else if (values.owner !== OWNER_DEFAULT) body.third_party_code = values.owner
   return body
 }
 
@@ -165,6 +194,11 @@ export function toPurchaseUpdate(
   // the back cannot take the plastic away from a purchase, only change it
   if (values.card_last_digits && values.card_last_digits !== purchase.card_last_digits) {
     body.card_last_digits = values.card_last_digits
+  }
+  // without third_party_code and own_expense the back keeps the third party as it is
+  if (values.owner !== (purchase.third_party_code ?? OWNER_DEFAULT)) {
+    if (values.owner === OWNER_OWN) body.own_expense = true
+    else if (values.owner !== OWNER_DEFAULT) body.third_party_code = values.owner
   }
   return body
 }

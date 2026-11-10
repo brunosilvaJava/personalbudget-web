@@ -43,11 +43,19 @@ export const plasticSchema = z.object({
   last_digits: z.string().regex(/^\d{4}$/, 'Informe os 4 últimos dígitos.'),
   kind: z.enum(['PHYSICAL', 'VIRTUAL', 'UNKNOWN']),
   status: z.enum(['ACTIVE', 'REPLACED', 'INACTIVE']),
+  /** the purchases made with this plastic are this third party's unless the purchase says otherwise */
+  default_third_party_code: z.string().nullable(),
 })
 
 export type PlasticFormInput = z.input<typeof plasticSchema>
 export type PlasticFormValues = z.output<typeof plasticSchema>
-export const PLASTIC_FIELDS = ['holder_code', 'last_digits', 'kind', 'status'] as const
+export const PLASTIC_FIELDS = [
+  'holder_code',
+  'last_digits',
+  'kind',
+  'status',
+  'default_third_party_code',
+] as const
 
 export function plasticDefaults(
   plastic?: CreditCardPlasticResponse,
@@ -58,6 +66,7 @@ export function plasticDefaults(
     last_digits: plastic?.last_digits ?? '',
     kind: plastic?.kind ?? 'UNKNOWN',
     status: plastic?.status ?? 'ACTIVE',
+    default_third_party_code: plastic?.default_third_party_code ?? null,
   }
 }
 
@@ -69,7 +78,7 @@ export function toPlasticRequest(values: PlasticFormValues): CreditCardPlasticRe
   }
 }
 
-/** Only the kind and the status can change: the holder and the digits are the plastic's identity. */
+/** The holder and the digits are the plastic's identity; the rest can change. */
 export function toPlasticUpdate(
   plastic: CreditCardPlasticResponse,
   values: PlasticFormValues,
@@ -77,5 +86,12 @@ export function toPlasticUpdate(
   const body: CreditCardPlasticUpdateRequest = {}
   if (values.kind !== plastic.kind) body.kind = values.kind as CreditCardPlasticKind
   if (values.status !== plastic.status) body.status = values.status as CreditCardPlasticStatus
+  if (values.default_third_party_code !== plastic.default_third_party_code) {
+    if (values.default_third_party_code) {
+      body.default_third_party_code = values.default_third_party_code
+    } else {
+      body.clear_default_third_party = true
+    }
+  }
   return body
 }

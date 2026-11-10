@@ -33,6 +33,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton'
 import { CategorySelect } from '@/features/categories/CategorySelect'
 import { useCategoryLookup } from '@/features/categories/queries'
+import { useActiveThirdParties, useThirdPartyLookup } from '@/features/third-parties/queries'
 import { applyApiErrors, errorMessage } from '@/lib/api-errors'
 import { formatDate, formatMoney, formatShortDate, formatShortMonth } from '@/lib/format'
 import { fromCents } from '@/lib/money'
@@ -47,6 +48,8 @@ import {
   useUpdatePurchase,
 } from './cardQueries'
 import {
+  OWNER_DEFAULT,
+  OWNER_OWN,
   PURCHASE_FIELDS,
   purchaseDefaults,
   purchaseSchema,
@@ -193,6 +196,7 @@ function PurchaseView({
             : `${purchase.installments}x de ${formatMoney(purchase.installment_amount)}`}{' '}
           · {cards.get(purchase.card_code)?.name ?? 'Cartão'} · {formatDate(purchase.purchase_date)}
           {category && ` · ${category.name}`}
+          {purchase.third_party_name && ` · de ${purchase.third_party_name}`}
           {purchase.card_holder_name &&
             ` · ${purchase.card_holder_name}${
               purchase.card_last_digits ? ` (final ${purchase.card_last_digits})` : ''
@@ -298,6 +302,14 @@ function PurchaseForm({
   const usablePlastics = (plastics.data ?? []).filter(
     (plastic) => plastic.status === 'ACTIVE' || plastic.last_digits === purchase?.card_last_digits,
   )
+  const thirdParties = useActiveThirdParties()
+  const thirdPartyLookup = useThirdPartyLookup()
+  const currentOwner = purchase?.third_party_code ?? null
+  const ownerOptions = (thirdParties.data ?? []).slice()
+  const currentParty = currentOwner ? thirdPartyLookup.get(currentOwner) : undefined
+  if (currentParty && !ownerOptions.some((party) => party.code === currentParty.code)) {
+    ownerOptions.push(currentParty)
+  }
   const installments = useWatch({ control, name: 'installments' })
   const amount = useWatch({ control, name: 'installment_amount' })
   const total =
@@ -473,6 +485,44 @@ function PurchaseForm({
                       {usablePlastics.map((plastic) => (
                         <SelectItem key={plastic.code} value={plastic.last_digits}>
                           final {plastic.last_digits} · {plastic.holder_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </Field>
+            )}
+          />
+        )}
+        {ownerOptions.length > 0 && (
+          <Controller
+            control={control}
+            name="owner"
+            render={({ field, fieldState }) => (
+              <Field
+                id="purchase-owner"
+                label="De quem é a compra"
+                error={fieldState.error?.message}
+                description={
+                  purchase
+                    ? 'Trocar de dono refaz o que há a receber; não dá depois de receber algo ou com o ciclo fechado.'
+                    : 'O padrão segue o plástico e o cartão. Uma compra de terceiro entra em “A receber”.'
+                }
+              >
+                {(aria) => (
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <SelectTrigger {...aria}>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={OWNER_DEFAULT}>
+                        {purchase ? 'Manter como está' : 'Padrão do plástico e do cartão'}
+                      </SelectItem>
+                      <SelectItem value={OWNER_OWN}>Minha despesa</SelectItem>
+                      {ownerOptions.map((party) => (
+                        <SelectItem key={party.code} value={party.code}>
+                          {party.name}
+                          {party.status === 'INACTIVE' ? ' (inativo)' : ''}
                         </SelectItem>
                       ))}
                     </SelectContent>

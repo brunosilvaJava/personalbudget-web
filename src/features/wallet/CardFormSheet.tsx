@@ -19,6 +19,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet'
+import { ThirdPartySelect } from '@/features/third-parties/ThirdPartySelect'
 import { applyApiErrors } from '@/lib/api-errors'
 import { useOnline } from '@/lib/online'
 import { AccountSelect } from './AccountSelect'
@@ -169,6 +170,27 @@ function CardForm({ card, onDone }: { card?: CreditCardResponse; onDone: () => v
               description="Sem ela, a fatura é paga pela conta padrão."
             >
               {(aria) => <AccountSelect {...aria} value={field.value} onChange={field.onChange} />}
+            </Field>
+          )}
+        />
+        <Controller
+          control={control}
+          name="default_third_party_code"
+          render={({ field, fieldState }) => (
+            <Field
+              id="card-third-party"
+              label="Terceiro padrão (opcional)"
+              error={fieldState.error?.message}
+              description="Cartão emprestado: toda compra vira dele, salvo as do plástico ou da própria compra."
+            >
+              {(aria) => (
+                <ThirdPartySelect
+                  {...aria}
+                  value={field.value}
+                  onChange={field.onChange}
+                  noneLabel="Ninguém (minhas compras)"
+                />
+              )}
             </Field>
           )}
         />

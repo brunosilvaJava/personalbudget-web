@@ -15,6 +15,7 @@ import type {
   IncomeOccurrenceResponse,
   IncomeScheduleResponse,
   InstallmentBillResponse,
+  ThirdPartyResponse,
   Page,
   PayCycleAdjustmentResponse,
   PayCycleClosurePreviewResponse,
@@ -510,4 +511,23 @@ export const plastics = {
     status: 'ACTIVE',
     default_third_party_code: null,
   } satisfies CreditCardPlasticResponse,
+}
+
+export const thirdParties = {
+  mae: {
+    code: 't-mae',
+    name: 'Mãe',
+    status: 'ACTIVE',
+    open_amount: 300,
+    late_amount: 100,
+    open_count: 3,
+  } satisfies ThirdPartyResponse,
+  amigo: {
+    code: 't-amigo',
+    name: 'Amigo',
+    status: 'INACTIVE',
+    open_amount: 0,
+    late_amount: 0,
+    open_count: 0,
+  } satisfies ThirdPartyResponse,
 }
