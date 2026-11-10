@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 
-import { apiGet, todayIso, unique } from './helpers'
+import { apiGet, findInList, todayIso, unique } from './helpers'
 
 interface MovementPage {
   content: { description: string; recurrence_bill_code: string | null }[]
@@ -48,7 +48,7 @@ test('a monthly bill due today is posted as soon as it is saved, once', async ({
   expect(posted.content).toHaveLength(1)
   expect(posted.content[0]?.recurrence_bill_code).not.toBeNull()
 
-  await page.goto('/movimentacoes')
+  await findInList(page, description)
   await expect(page.getByRole('button', { name: new RegExp(description) })).toBeVisible()
 })
 
