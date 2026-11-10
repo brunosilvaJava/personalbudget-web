@@ -5,6 +5,8 @@ import type {
   CashForecastResponse,
   CategoryGroupResponse,
   CategoryResponse,
+  CreditCardHolderResponse,
+  CreditCardPlasticResponse,
   CreditCardResponse,
   PayCycleConfigResponse,
   PayCycleResponse,
@@ -24,6 +26,8 @@ export function mockCommonApi(
     payCycleConfig?: PayCycleConfigResponse
     accounts?: AccountResponse[]
     cards?: CreditCardResponse[]
+    holders?: CreditCardHolderResponse[]
+    plastics?: CreditCardPlasticResponse[]
     forecast?: CashForecastResponse
   } = {},
 ) {
@@ -47,6 +51,8 @@ export function mockCommonApi(
         list.filter((card) => (statuses.length ? statuses : ['ACTIVE']).includes(card.status)),
       )
     }),
+    http.get('/api/credit_card/:code/holder', () => HttpResponse.json(options.holders ?? [])),
+    http.get('/api/credit_card/:code/plastic', () => HttpResponse.json(options.plastics ?? [])),
     http.get('/api/forecast', () => HttpResponse.json(options.forecast ?? cashForecast())),
     http.get('/api/pay_cycle_config', () =>
       HttpResponse.json(options.payCycleConfig ?? payCycleConfig()),

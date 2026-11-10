@@ -6,6 +6,8 @@ import type {
   CycleEnvelopesResponse,
   CategoryGroupResponse,
   CategoryResponse,
+  CreditCardHolderResponse,
+  CreditCardPlasticResponse,
   CreditCardResponse,
   FinancialMovementResponse,
   FixedBillResponse,
@@ -468,4 +470,44 @@ export function cashForecast(overrides: Partial<CashForecastResponse> = {}): Cas
     receivables: 0,
     ...overrides,
   }
+}
+
+export const holders = {
+  titular: {
+    code: 'h-titular',
+    card_code: cards.nubank.code,
+    name: 'Bruno',
+    kind: 'TITULAR',
+    status: 'ACTIVE',
+  } satisfies CreditCardHolderResponse,
+  marcia: {
+    code: 'h-marcia',
+    card_code: cards.nubank.code,
+    name: 'Márcia',
+    kind: 'ADICIONAL',
+    status: 'ACTIVE',
+  } satisfies CreditCardHolderResponse,
+}
+
+export const plastics = {
+  main: {
+    code: 'p-3578',
+    card_code: cards.nubank.code,
+    holder_code: 'h-titular',
+    holder_name: 'Bruno',
+    last_digits: '3578',
+    kind: 'PHYSICAL',
+    status: 'ACTIVE',
+    default_third_party_code: null,
+  } satisfies CreditCardPlasticResponse,
+  marcia: {
+    code: 'p-3202',
+    card_code: cards.nubank.code,
+    holder_code: 'h-marcia',
+    holder_name: 'Márcia',
+    last_digits: '3202',
+    kind: 'UNKNOWN',
+    status: 'ACTIVE',
+    default_third_party_code: null,
+  } satisfies CreditCardPlasticResponse,
 }
