@@ -8,6 +8,7 @@ import { LaunchButton } from '@/components/layout/LaunchButton'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useCategoryLookup } from '@/features/categories/queries'
+import { useThirdPartyLookup } from '@/features/third-parties/queries'
 import { formatDayHeader, formatSignedValue } from '@/lib/format'
 import type { MovementListFilters } from '@/lib/query-keys'
 import { cn } from '@/lib/utils'
@@ -26,6 +27,7 @@ interface MovementListProps {
 export function MovementList({ filters, filtered, onClearFilters, onSelect }: MovementListProps) {
   const list = useMovementList(filters)
   const categories = useCategoryLookup()
+  const thirdParties = useThirdPartyLookup()
   const sentinel = useLoadMoreOnScroll(
     () => void list.fetchNextPage(),
     list.hasNextPage && !list.isFetchingNextPage,
@@ -100,6 +102,11 @@ export function MovementList({ filters, filtered, onClearFilters, onSelect }: Mo
                   movement={movement}
                   category={
                     movement.category_code ? categories.get(movement.category_code) : undefined
+                  }
+                  thirdPartyName={
+                    movement.third_party_code
+                      ? thirdParties.get(movement.third_party_code)?.name
+                      : undefined
                   }
                   onSelect={onSelect}
                 />

@@ -16,10 +16,18 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet'
 import { Skeleton } from '@/components/ui/skeleton'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { useGroupedCategories } from '@/features/categories/queries'
 import type { Period } from '@/features/period/period'
-import { EMPTY_FILTERS, type MovementFilters } from './filters'
+import { useAllThirdParties } from '@/features/third-parties/queries'
+import { EMPTY_FILTERS, OWNER_ONLY_MINE, type MovementFilters } from './filters'
 
 interface MovementFiltersSheetProps {
   open: boolean
@@ -28,6 +36,9 @@ interface MovementFiltersSheetProps {
   period: Period
   onApply: (filters: MovementFilters, period: Period) => void
 }
+
+/** Radix Select does not accept an empty value, so "everyone" gets a stand-in. */
+const ALL_OWNERS = '__all__'
 
 const STATUS_OPTIONS: { value: FinancialMovementStatus; label: string }[] = [
   { value: 'PENDING', label: 'Pendentes' },
@@ -159,6 +170,8 @@ function FiltersForm({
           )}
         </fieldset>
 
+        <OwnerFilter value={draft.owner} onChange={(owner) => setDraft({ ...draft, owner })} />
+
         <CategoryFilter
           selected={draft.categoryCodes}
           withoutCategory={draft.withoutCategory}
@@ -184,6 +197,41 @@ function FiltersForm({
         </Button>
       </SheetFooter>
     </form>
+  )
+}
+
+/** Everyone's, only mine, or one third party. Hidden while there is no third party to tell apart. */
+function OwnerFilter({
+  value,
+  onChange,
+}: {
+  value: string | undefined
+  onChange: (owner: string | undefined) => void
+}) {
+  const parties = useAllThirdParties()
+  if (!value && (parties.data ?? []).length === 0) return null
+  return (
+    <fieldset className="flex flex-col gap-2">
+      <legend className="mb-2 text-sm font-medium">De quem</legend>
+      <Select
+        value={value ?? ALL_OWNERS}
+        onValueChange={(next) => onChange(next === ALL_OWNERS ? undefined : next)}
+      >
+        <SelectTrigger aria-label="De quem">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value={ALL_OWNERS}>De todos</SelectItem>
+          <SelectItem value={OWNER_ONLY_MINE}>Só meus</SelectItem>
+          {(parties.data ?? []).map((party) => (
+            <SelectItem key={party.code} value={party.code}>
+              {party.name}
+              {party.status === 'INACTIVE' ? ' (inativo)' : ''}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </fieldset>
   )
 }
 
