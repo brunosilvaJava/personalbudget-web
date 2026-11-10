@@ -30,6 +30,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet'
+import { ThirdPartySelect } from '@/features/third-parties/ThirdPartySelect'
 import { applyApiErrors } from '@/lib/api-errors'
 import { useOnline } from '@/lib/online'
 import { useCreatePlastic, useUpdatePlastic } from './holderQueries'
@@ -227,6 +228,29 @@ function PlasticForm({
                       ))}
                     </SelectContent>
                   </Select>
+                )}
+              </Field>
+            )}
+          />
+        )}
+        {plastic && (
+          <Controller
+            control={control}
+            name="default_third_party_code"
+            render={({ field, fieldState }) => (
+              <Field
+                id="plastic-third-party"
+                label="Terceiro padrão (opcional)"
+                error={fieldState.error?.message}
+                description="As compras deste plástico viram deste terceiro, salvo as que disserem outra coisa. Vale sobre o padrão do cartão."
+              >
+                {(aria) => (
+                  <ThirdPartySelect
+                    {...aria}
+                    value={field.value}
+                    onChange={field.onChange}
+                    noneLabel="Seguir o padrão do cartão"
+                  />
                 )}
               </Field>
             )}

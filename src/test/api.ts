@@ -10,6 +10,7 @@ import type {
   CreditCardResponse,
   PayCycleConfigResponse,
   PayCycleResponse,
+  ThirdPartyResponse,
 } from '@/api/contracts'
 import { accounts, allCategories, cashForecast, groups, payCycleConfig } from './fixtures'
 import { server } from './server'
@@ -28,6 +29,7 @@ export function mockCommonApi(
     cards?: CreditCardResponse[]
     holders?: CreditCardHolderResponse[]
     plastics?: CreditCardPlasticResponse[]
+    thirdParties?: ThirdPartyResponse[]
     forecast?: CashForecastResponse
   } = {},
 ) {
@@ -53,6 +55,14 @@ export function mockCommonApi(
     }),
     http.get('/api/credit_card/:code/holder', () => HttpResponse.json(options.holders ?? [])),
     http.get('/api/credit_card/:code/plastic', () => HttpResponse.json(options.plastics ?? [])),
+    http.get('/api/third_party', ({ request }) => {
+      const statuses = new URL(request.url).searchParams.getAll('status')
+      return HttpResponse.json(
+        (options.thirdParties ?? []).filter((party) =>
+          (statuses.length ? statuses : ['ACTIVE']).includes(party.status),
+        ),
+      )
+    }),
     http.get('/api/forecast', () => HttpResponse.json(options.forecast ?? cashForecast())),
     http.get('/api/pay_cycle_config', () =>
       HttpResponse.json(options.payCycleConfig ?? payCycleConfig()),
