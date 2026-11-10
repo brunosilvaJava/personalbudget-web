@@ -1,5 +1,6 @@
 import { Pencil, Plus, Users } from 'lucide-react'
 import { useState } from 'react'
+import { Link } from 'react-router'
 import { toast } from 'sonner'
 
 import type { ThirdPartyResponse } from '@/api/contracts'
@@ -48,7 +49,10 @@ export function ThirdPartiesPage() {
             const active = party.status === 'ACTIVE'
             return (
               <li key={party.code} className="flex flex-wrap items-center gap-3 px-4 py-3">
-                <div className="min-w-0 flex-1">
+                <Link
+                  to={`/carteira/terceiros/${party.code}`}
+                  className="min-w-0 flex-1 rounded-md transition-colors hover:bg-accent/60"
+                >
                   <p className="flex items-center gap-2 font-medium">
                     {party.name}
                     {!active && <Badge variant="muted">inativo</Badge>}
@@ -59,7 +63,7 @@ export function ThirdPartiesPage() {
                       : `A receber ${formatMoney(party.open_amount)}`}
                     {party.late_amount > 0 && ` · ${formatMoney(party.late_amount)} atrasado`}
                   </p>
-                </div>
+                </Link>
                 <Button
                   variant="ghost"
                   size="sm"
