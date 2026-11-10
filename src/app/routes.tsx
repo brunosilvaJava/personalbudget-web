@@ -18,6 +18,7 @@ import { MovementsPage } from '@/features/movements/MovementsPage'
 import { RecurringLayout } from '@/features/recurring/RecurringLayout'
 import { NotFoundPage } from '@/features/system/NotFoundPage'
 import { ThirdPartiesPage } from '@/features/third-parties/ThirdPartiesPage'
+import { ThirdPartyPage } from '@/features/third-parties/ThirdPartyPage'
 import { AccountsPage } from '@/features/wallet/AccountsPage'
 import { AccountStatementPage } from '@/features/wallet/AccountStatementPage'
 import { CardPage } from '@/features/wallet/CardPage'
@@ -50,6 +51,7 @@ export const routes: RouteObject[] = [
       { path: 'carteira/contas/:code', element: <AccountStatementPage /> },
       { path: 'carteira/cartoes/:code', element: <CardPage /> },
       { path: 'carteira/faturas/:code', element: <InvoicePage /> },
+      { path: 'carteira/terceiros/:code', element: <ThirdPartyPage /> },
       {
         path: 'recorrentes',
         element: <RecurringLayout />,
