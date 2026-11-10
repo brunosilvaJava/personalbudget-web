@@ -9,6 +9,7 @@ import type {
   ISODate,
   IncomeScheduleStatus,
   InstallmentBillQuery,
+  ThirdPartyStatus,
   UUID,
   YearMonth,
 } from '@/api/contracts'
@@ -62,6 +63,10 @@ export const queryKeys = {
   cardInvoice: (code: UUID) => ['card-invoice', code] as const,
   invoicePayments: (invoiceCode: UUID) => ['invoice-payments', invoiceCode] as const,
   cardPurchase: (code: UUID) => ['card-purchase', code] as const,
+
+  thirdParties: (statuses: readonly ThirdPartyStatus[]) => ['third-parties', statuses] as const,
+  thirdParty: (code: UUID) => ['third-party', code] as const,
+  receivables: (thirdPartyCode: UUID) => ['receivables', thirdPartyCode] as const,
 
   incomeSchedules: (statuses: readonly IncomeScheduleStatus[]) =>
     ['income-schedules', statuses] as const,
@@ -117,6 +122,9 @@ export const FINANCIAL_ROOT_KEYS = [
   'invoice-payments',
   'card-purchases',
   'card-purchase',
+  'third-parties',
+  'third-party',
+  'receivables',
   'envelopes',
   'forecast',
   'pay-cycle-summary',

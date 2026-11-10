@@ -17,6 +17,7 @@ import { CyclesPage } from '@/features/pay-cycles/CyclesPage'
 import { MovementsPage } from '@/features/movements/MovementsPage'
 import { RecurringLayout } from '@/features/recurring/RecurringLayout'
 import { NotFoundPage } from '@/features/system/NotFoundPage'
+import { ThirdPartiesPage } from '@/features/third-parties/ThirdPartiesPage'
 import { AccountsPage } from '@/features/wallet/AccountsPage'
 import { AccountStatementPage } from '@/features/wallet/AccountStatementPage'
 import { CardPage } from '@/features/wallet/CardPage'
@@ -43,6 +44,7 @@ export const routes: RouteObject[] = [
           { path: 'contas', element: <AccountsPage /> },
           { path: 'cartoes', element: <CardsPage /> },
           { path: 'transferencias', element: <TransfersPage /> },
+          { path: 'terceiros', element: <ThirdPartiesPage /> },
         ],
       },
       { path: 'carteira/contas/:code', element: <AccountStatementPage /> },
