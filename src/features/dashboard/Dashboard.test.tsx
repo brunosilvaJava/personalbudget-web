@@ -164,4 +164,26 @@ describe('Caixa diário', () => {
     await screen.findAllByRole('link', { name: /de nov/ })
     expect(calls.balanceQueries[0]?.toString()).toBe('initial_date=2026-11-01&end_date=2026-11-30')
   })
+
+  it('should show the cash of third parties as "repasses", apart from revenue and expense', async () => {
+    mockCommonApi()
+    mockReports()
+    server.use(
+      http.get('/api/balance/daily', () =>
+        HttpResponse.json([
+          {
+            ...day('2026-11-09', 300, 300),
+            pass_through_in: 400,
+            pass_through_out: -100,
+          },
+          day('2026-11-10', 300, 300),
+        ]),
+      ),
+    )
+    renderApp('/caixa')
+
+    const days = await screen.findAllByRole('link', { name: /de nov/ })
+    expect(within(days[0]!).getByText(/repasses/)).toHaveTextContent(/repasses \+R\$\s300,00/)
+    expect(within(days[1]!).queryByText(/repasses/)).not.toBeInTheDocument()
+  })
 })

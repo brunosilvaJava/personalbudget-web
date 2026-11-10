@@ -46,6 +46,27 @@ describe('movement filters', () => {
     ).toEqual({ start_date: '2026-11-01', end_date: '2026-11-30', without_category: true })
   })
 
+  it('should read and write whose movements to show, "meus" or a third party', () => {
+    const base = { statuses: [], categoryCodes: [], withoutCategory: false, search: '' }
+    const period = { start: '2026-11-01', end: '2026-11-30' }
+
+    expect(writeFilters(new URLSearchParams(), { ...base, owner: 'meus' }).toString()).toBe(
+      'de=meus',
+    )
+    expect(readFilters(new URLSearchParams('de=t1')).owner).toBe('t1')
+    expect(readFilters(new URLSearchParams('')).owner).toBeUndefined()
+    expect(toListFilters(period, { ...base, owner: 'meus' })).toEqual({
+      start_date: '2026-11-01',
+      end_date: '2026-11-30',
+      own_only: true,
+    })
+    expect(toListFilters(period, { ...base, owner: 't1' })).toEqual({
+      start_date: '2026-11-01',
+      end_date: '2026-11-30',
+      third_party_code: 't1',
+    })
+  })
+
   it('should ignore unknown values in the URL', () => {
     expect(readFilters(new URLSearchParams('tipo=x&status=paga&status=foo')).statuses).toEqual([
       'PAID_OUT',

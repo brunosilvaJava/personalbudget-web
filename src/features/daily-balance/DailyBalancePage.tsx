@@ -177,8 +177,15 @@ function DayList({ days, focusDay }: { days: DailyBalance[]; focusDay: string | 
         const expense = fromCents(
           toCents(day.balance.total_expense) + toCents(day.projected.pending_total_expense),
         )
+        // Cash of third parties that crosses the accounts: in the closing, in neither of the two above.
+        const passThrough = fromCents(
+          toCents(day.pass_through_in) +
+            toCents(day.pass_through_out) +
+            toCents(day.pending_pass_through_in) +
+            toCents(day.pending_pass_through_out),
+        )
         const closing = future ? day.projected.closing : day.balance.closing
-        const quiet = revenue === 0 && expense === 0
+        const quiet = revenue === 0 && expense === 0 && passThrough === 0
         return (
           <li key={day.date} id={`day-${day.date}`}>
             <Link
@@ -209,6 +216,12 @@ function DayList({ days, focusDay }: { days: DailyBalance[]; focusDay: string | 
                     )}
                     {expense !== 0 && (
                       <span className="text-expense">{formatSignedValue(expense)}</span>
+                    )}
+                    {passThrough !== 0 && (
+                      <span className="text-muted-foreground">
+                        {(revenue !== 0 || expense !== 0) && ' · '}repasses{' '}
+                        {formatSignedValue(passThrough)}
+                      </span>
                     )}
                   </p>
                 )}
