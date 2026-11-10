@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 
-import { moneyPattern, totalBalance, unique } from './helpers'
+import { findInList, moneyPattern, totalBalance, unique } from './helpers'
 
 test('launches an expense already paid, then reverses the payment', async ({ page, request }) => {
   const description = unique('Pão e leite')
@@ -16,6 +16,7 @@ test('launches an expense already paid, then reverses the payment', async ({ pag
   // Two calls (the movement, then its settlement): the account is the one that lost the money.
   await expect.poll(() => totalBalance(request)).toBeCloseTo(before - 18.4, 2)
 
+  await findInList(page, description)
   await page.getByRole('button', { name: new RegExp(description) }).click()
   const movement = page.getByRole('dialog', { name: new RegExp(description) })
   await expect(movement.getByRole('button', { name: /Pagar/ })).toHaveCount(0)
@@ -42,6 +43,7 @@ test('launches an expense not paid yet: it stays pending and the balance does no
   await sheet.getByRole('switch', { name: 'Ainda não paguei' }).click()
   await sheet.getByRole('button', { name: 'Lançar despesa pendente' }).click()
 
+  await findInList(page, description)
   const row = page.getByRole('button', { name: new RegExp(description) })
   await expect(row).toBeVisible()
   await expect(row).toContainText(moneyPattern(231.77))

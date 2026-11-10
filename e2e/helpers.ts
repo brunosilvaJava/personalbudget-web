@@ -1,4 +1,4 @@
-import { expect, type APIRequestContext } from '@playwright/test'
+import { expect, type APIRequestContext, type Page } from '@playwright/test'
 
 const TIME_ZONE = 'America/Sao_Paulo'
 
@@ -219,4 +219,12 @@ export async function activateCycles(
     .sort((a, b) => a.start_date.localeCompare(b.start_date))
   expect(chain.length, 'cycles created by the activation').toBeGreaterThanOrEqual(3)
   return chain
+}
+
+/**
+ * Opens the movements list searching for a description. The database is shared by every spec, so a month
+ * soon holds more than one page (20) of movements and a row just launched may not be on the first one.
+ */
+export async function findInList(page: Page, description: string) {
+  await page.goto(`/movimentacoes?busca=${encodeURIComponent(description)}`)
 }
