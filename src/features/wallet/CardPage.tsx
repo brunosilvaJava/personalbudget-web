@@ -1,4 +1,4 @@
-import { ArrowLeft, ChevronRight, Pencil, Plus, ReceiptText } from 'lucide-react'
+import { ArrowLeft, ChevronRight, FileUp, Pencil, Plus, ReceiptText } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { toast } from 'sonner'
@@ -73,6 +73,14 @@ function CardView({ card }: { card: CreditCardResponse }) {
           <Button className="h-11" onClick={() => setBuying(true)} disabled={!online}>
             <Plus aria-hidden />
             Nova compra
+          </Button>
+        )}
+        {active && (
+          <Button asChild variant="outline" className="h-11">
+            <Link to={`/carteira/cartoes/${card.code}/importar`}>
+              <FileUp aria-hidden />
+              Importar fatura
+            </Link>
           </Button>
         )}
         <Button variant="outline" className="h-11" onClick={() => setEditing(true)}>

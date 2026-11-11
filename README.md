@@ -2,6 +2,8 @@
 
 Front-end da [PersonalBudget API](https://github.com/brunosilvaJava/personalbudget): um PWA em React que roda no celular e no navegador e consome a API na rede de casa.
 
+Telas: Início (dashboard), Movimentações, Carteira (contas, extrato, transferências, cartões, faturas, titulares e plásticos, terceiros e a receber), Recorrentes, Receita e calendário de feriados, Ciclos (com fechamento), Envelopes, Previsão de caixa e Caixa diário. Há ainda a importação de fatura de cartão a partir do CSV do Nubank ou do C6.
+
 O plano completo, com as fases, está no doc "PersonalBudget — Plano do front-end" do projeto.
 
 ## Rodar
@@ -41,6 +43,7 @@ src/
 ├─ app/          App, rotas, QueryClient, tema
 ├─ api/          contracts.ts (tipos da API), http.ts (fetch), um módulo por recurso
 ├─ features/     uma pasta por tela: página, formulários e queries.ts
+│                (ex.: wallet, third-parties, card-import, movements, cycles)
 ├─ components/   ui/ (shadcn), layout/ (AppShell, barras), domain/ (EmptyState...)
 ├─ lib/          format.ts, dates.ts, query-keys.ts, utils.ts
 └─ test/         setup, servidor MSW, render do app
@@ -102,6 +105,9 @@ Os ícones (`public/icons/*`, `public/apple-touch-icon.png`) saem de `public/fav
 
 O Playwright roda os cenários contra o app servido como no dia a dia (nginx na porta 3000) com a **API real** atrás, em viewport de celular (Pixel 7) e de desktop:
 
+- criar titular e plástico num cartão e comprar com o plástico;
+- cartão emprestado a um terceiro: a compra vira "a receber", o recebimento credita a conta e a baixa fecha o recebível sem mexer em conta;
+- importar um CSV de fatura do Nubank (prévia, pagamento deixado de fora) e reimportar o mesmo arquivo (tudo "já importada");
 - lançar uma despesa já paga (criar + liquidar) e estornar, conferindo o saldo das contas na API;
 - lançar uma despesa pendente, que não mexe no saldo;
 - criar uma conta fixa com vencimento hoje e ver o lançamento gerado na hora, uma vez só;
@@ -121,6 +127,8 @@ npx playwright install chromium   # uma vez
 npm run e2e
 ```
 
+Todos os cenários que lançam movimentações abrem a lista com `?busca=<descrição>` (`findInList` em `e2e/helpers.ts`): o banco de teste é compartilhado e o mês passa de uma página (20) de movimentações, então a linha nova pode não estar na primeira.
+
 **Atenção:** os cenários criam contas, cartões e lançamentos de verdade. Rode só contra um banco de teste, nunca contra o que você usa. O compose do back usa nomes fixos de container e as portas 3306 e 8080, então pare o back de uso diário antes e, no fim, `docker compose down` apaga o banco do teste. Se já tiver um Chrome, `CHROME_PATH=/usr/bin/google-chrome npm run e2e` dispensa o download.
 
 ## Contrato com o back
@@ -135,15 +143,21 @@ npm run e2e
 Uma PR por fase, empilhadas (cada uma sai da anterior).
 
 - [x] **Fase 0 · Fundação:** projeto, tema, client HTTP, contratos, proxy, navegação e CI
-- [ ] **Fase 1a · Movimentações:** contrato novo, infraestrutura de formulários e lista com filtros
-- [ ] **Fase 1b · Ações nas movimentações:** lançar, editar, excluir, pagar e estornar
-- [ ] **Fase 2a · Carteira:** navegação nova, contas, extrato e transferências
-- [ ] **Fase 2b · Cartões:** cartões, compras, faturas e "Pagou com"
-- [ ] **Fase 3 · Dashboard e Caixa diário**
-- [ ] **Fase 4 · Recorrentes:** contas fixas e parceladas
-- [ ] **Fase 5 · Docker e PWA**, com HTTPS via Tailscale e testes ponta a ponta
-- [ ] **Fase 6 · Receita e calendário**
-- [ ] **Fase 7 · Ciclos**
-- [ ] **Fase 8 · Envelopes e previsão de caixa**
-- [ ] **Fase 8b · Fechamento de ciclo**
-- [ ] **Fase 9 · Multiusuário e visão do casal** (depende de login no back)
+- [x] **Fase 1a · Movimentações:** contrato novo, infraestrutura de formulários e lista com filtros
+- [x] **Fase 1b · Ações nas movimentações:** lançar, editar, excluir, pagar e estornar
+- [x] **Fase 2a · Carteira:** navegação nova, contas, extrato e transferências
+- [x] **Fase 2b · Cartões:** cartões, compras, faturas e "Pagou com"
+- [x] **Fase 3 · Dashboard e Caixa diário**
+- [x] **Fase 4 · Recorrentes:** contas fixas e parceladas
+- [x] **Fase 5 · Docker e PWA**, com HTTPS via Tailscale e testes ponta a ponta
+- [x] **Fase 6 · Receita e calendário**
+- [x] **Fase 7 · Ciclos**
+- [x] **Fase 8 · Envelopes e previsão de caixa**
+- [x] **Fase 8b · Fechamento de ciclo**
+- [ ] **Cartões adicionais, terceiros e importação** (PRs empilhadas #18 a #24, ainda em rascunho; o back já está na `master`):
+  - F0 contratos e API · F1 titulares e plásticos · F2 terceiros (padrão do cartão, selos, filtro "De quem", repasses) · F3 "A receber" e recebimentos · F4 baixa · F5 importação de fatura (CSV Nubank e C6)
+- [ ] **Fase 9 · Multiusuário e visão do casal** (depende de login no back; adiada)
+
+### Importar fatura
+
+Em **Carteira → Cartão → Importar fatura**: escolha o CSV do Nubank (`date,title,amount`) ou do C6 (exportação da fatura, sem alterar o cabeçalho). O arquivo é lido no navegador; a prévia mostra uma linha por compra, com a fatura prevista, plástico, status (nova, já importada, parece repetida, erro) e uma caixa de seleção. Pagamentos de fatura e créditos ficam numa seção à parte e não são importados; tarifa com estorno do mesmo valor vem desmarcada. Plásticos que o cartão ainda não tem são cadastrados na própria tela antes de importar. Uma parcela k/N que cai em outra fatura mostra aviso e o botão "Tratar a data como a da parcela". São até 300 compras por importação, tudo ou nada; nada é lançado antes de você confirmar. Categorias ainda não são mapeadas.
